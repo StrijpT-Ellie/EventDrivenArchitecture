@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My first Three.js app</title>
+    <style>
+        body { margin: 0; }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import * as THREE from 'https://threejs.org/build/three.module.js';
+        window.THREE = THREE;
+        import { GLTFLoader } from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js';
+        window.GLTFLoader = GLTFLoader;
+    </script>
+    {% assets "main_js" %}
+        <script type="module" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+</body>
+</html>
