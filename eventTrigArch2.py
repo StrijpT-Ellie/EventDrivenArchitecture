@@ -42,11 +42,27 @@ ee.on('enable_wave_effect', enable_wave_effect)
 ee.on('disable_wave_effect', disable_wave_effect)
 
 # Function to follow the file and emit events
+import requests
+
+# Function to follow the file and emit events
 def follow_file_and_emit_events():
     with open('/Users/krasnomakov/Documents1/py/ellie/yolov9-main/output.txt', 'r') as f:
         for line in tailer.follow(f):
             if 'cell phone' in line:
                 ee.emit('change_pixel_size', new_width, new_height)
+
+                # Define the URL
+                url = "http://localhost:5000/change_animation"
+
+                # Define the data payload
+                data = {"animation_style": "divide"}
+
+                # Send a POST request
+                response = requests.post(url, data=data)
+
+                # Print the response
+                print(response.text)
+
             elif 'bottle' in line:
                 ee.emit('enable_wave_effect')
             else:
@@ -92,6 +108,9 @@ while True:
     # Apply the wave effect if the flag is set
     if apply_wave:
         pixelated = apply_wave_effect(pixelated)
+        
+    # Resize the processed image back to 20x20 pixels
+    pixelated = cv2.resize(pixelated, (20, 20), interpolation=cv2.INTER_LINEAR)  #Change the size here to manipulate the final image size
 
     # Convert the pixelated image to a NumPy array
     pixelated_np = np.array(pixelated)
