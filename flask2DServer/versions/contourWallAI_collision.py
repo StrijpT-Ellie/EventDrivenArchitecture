@@ -138,7 +138,7 @@ class ParticleEmitter:
     def check_collision(self, particle1, particle2):
         # Check if two particles collide (simple collision detection based on distance)
         distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
-        return distance < 50  # Modify this threshold as needed
+        return distance < 12  # Modify this threshold as needed
     
 
 class Block:
