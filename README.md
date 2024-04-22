@@ -1,5 +1,3 @@
-# Optimized GitHub README
-
 ## Overview
 This repository contains two prototypes developed within the current semester. 
 
