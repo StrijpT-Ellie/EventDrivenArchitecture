@@ -136,6 +136,44 @@ class ParticleEmitter:
     def draw(self, screen):
         for particle in self.particles:
             pygame.draw.circle(screen, particle.color, (particle.x, particle.y), 5)
+
+class Block:
+    def __init__(self, x, y, width, height, color):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.color = color
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.color, pygame.Rect(self.x, self.y, self.width, self.height))
+
+class BlockEmitter:
+    def __init__(self, screen_width, screen_height, block_size):
+        self.blocks = []
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.block_size = block_size
+
+    def trigger(self):
+        x = random.randint(0, self.screen_width - self.block_size)
+        y = random.randint(0, self.screen_height - self.block_size)
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        block = Block(x, y, self.block_size, self.block_size, color)
+        self.blocks.append(block)
+
+    def update(self, particles):
+        for block in self.blocks[:]:
+            for particle in particles:
+                if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
+                    self.blocks.remove(block)
+                    break
+
+    def draw(self, screen):
+        for block in self.blocks:
+            block.draw(screen)
+
+
      
 class Game:
     def __init__(self, width, height, grid_size, direction, num_particles, speed):
@@ -162,7 +200,7 @@ class Game:
         
         running = True
         emitter = None
-        swarm_controller = None
+        block_emitter = BlockEmitter(self.width, self.height, 50)
         
         while running:
             # Fill the screen with black
@@ -170,7 +208,7 @@ class Game:
 
             # Draw the particles
             for particle in self.particles:
-                pygame.draw.circle(self.screen, (255, 255, 255), (int(particle.x), int(particle.y)), 5)
+                pygame.draw.circle(self.screen, (255, 255, 255), (int(particle.x), int(particle.y)), 50)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -181,7 +219,9 @@ class Game:
                     elif event.key == pygame.K_p:  # Press "p" to trigger the emitter
                         emitter = ParticleEmitter(self.width, self.height, 25)
                         emitter.trigger()
-                    
+                    elif event.key == pygame.K_b:  # Press "b" to trigger the block emitter
+                        block_emitter.trigger()
+                   
 
             if self.mode == 'autopilot':
                 for particle in self.particles:
@@ -193,23 +233,45 @@ class Game:
                 move_factor = 50  # Adjust this value to change the movement distance
                 for particle in self.particles:
                     if direction == 'up':
-                        particle.update_acceleration(0, -0.1)  # Increase acceleration upwards
-                        particle.y -= particle.speed * move_factor
+                        particle.update_acceleration(0.5, -0.5)  # Increase acceleration upwards
+                        particle.y = max(0, particle.y - particle.speed * move_factor)
                     elif direction == 'down':
-                        particle.update_acceleration(0, 0.1)  # Increase acceleration downwards
-                        particle.y += particle.speed * move_factor
+                        particle.update_acceleration(0.5, 0.5)  # Increase acceleration downwards
+                        particle.y = min(self.height, particle.y + particle.speed * move_factor)
                     elif direction == 'left':
-                        particle.update_acceleration(-0.1, 0)  # Increase acceleration to the left
-                        particle.x -= particle.speed * move_factor
+                        particle.update_acceleration(-0.5, 0.5)  # Increase acceleration to the left
+                        particle.x = max(0, particle.x - particle.speed * move_factor)
                     elif direction == 'right':
-                        particle.update_acceleration(0.1, 0)  # Increase acceleration to the right
-                        particle.x += particle.speed * move_factor
+                        particle.update_acceleration(0.5, 0.5)  # Increase acceleration to the right
+                        particle.x = min(self.width, particle.x + particle.speed * move_factor)
                     particle.move(self.width, self.height)  # Move the particle with the updated acceleration
                     particle.update_acceleration(0, 0)  # Reset acceleration to zero
+                
+
+                # Update and draw the blocks
+                block_emitter.update(self.particles)
+                block_emitter.draw(self.screen)
 
                 if emitter:  # If the emitter has been triggered
                     emitter.update()
                     emitter.draw(self.screen)
+
+           
+
+        # Get the pixel values of the screen as a numpy array
+            screen_array = pygame.surfarray.array3d(self.screen)
+
+            # Resize the array to 20x20
+            resized_array = cv2.resize(screen_array, (20, 20))
+
+            # Reduce the color depth to 8-bit
+            reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
+
+            # Set print options
+            np.set_printoptions(threshold=np.inf)
+
+            # Print the array to the terminal
+            print(reduced_color_array)
 
             pygame.display.flip()
 
