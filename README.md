@@ -45,3 +45,9 @@ Particle behaviour must be updtaed and connected to handController allowing user
 
 This prototype must acquire more components with genAI text2picture or picture2picture models. As well as LLM for conversational mode. 
 Modes must be switching when certain events are recognised. 
+
+---
+
+The repo has several other scripts for human and noise level recognition. These are required to create a simpler, less demanding version of the event-driven architecture to be deployed on Jetson Nano. 
+
+As well there are some minor experiments with torch and numPy arrays for image generation. 
