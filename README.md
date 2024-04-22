@@ -4,7 +4,7 @@ flaskServerWithEffects is depreciated
 
 It consists of a Flask application rendering three.JS code and running a simulation of the board output 
 
-To run the app download yolov9 and launch it in a way that it will save all recognised objects in a text file 
+To run the app download yolov9 and launch it in a way that it will save all recognised objects in a text file.
 After yolo is running start eventTrigArch2.py - it will be reading the file and waiting for events (cell phone or bottle detected)
 
 Run the simulation.py file to have an output simulation - it will project 3D aniamtion from JS into the 2D numPy array. 
