@@ -1,3 +1,6 @@
+#this script works but creates small letters
+#it can break the text line and put the new text vbelow the previous text
+
 import cv2 as cv
 import numpy as np
 import os

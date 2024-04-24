@@ -10,7 +10,7 @@ load_character_index()
 
 # Initialize the ChatOllama model
 llm = ChatOllama(model="ICTjokes", stream = True)
-prompt = ChatPromptTemplate.from_template("Tell me a short joke about {topic}. Do not start with Sure here is the joke... or similar.")
+prompt = ChatPromptTemplate.from_template("Tell me a few words about {topic}. Only 2-3 words.")
 chain = prompt | llm | StrOutputParser()
 
 # Define the topic dictionary
