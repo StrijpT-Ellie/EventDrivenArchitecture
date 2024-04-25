@@ -39,3 +39,7 @@ This prototype must acquire more components with genAI text2picture or picture2p
 
 ## Additional Scripts
 The repo has several other scripts for person and noise level recognition. These are required to create a simpler, less demanding version of the event-driven architecture to be deployed on Jetson Nano. There are also some minor experiments with Torch and NumPy arrays for image generation.
+
+## Prototype 3: Ellie Connected
+This directory contains connected components. 
+
