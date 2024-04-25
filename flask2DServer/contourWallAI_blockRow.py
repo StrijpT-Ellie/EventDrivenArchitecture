@@ -261,7 +261,7 @@ class Game:
 
             if self.mode == 'autopilot':
                 for particle in self.particles:
-                    particle.update_acceleration(random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01))  # Add random acceleration
+                    particle.update_acceleration(random.uniform(-0.1, 0.1), random.uniform(-0.3, 0.3))  # Add random acceleration to make the particle move at the start in auto mode
                     particle.move(self.width, self.height)
             elif self.mode == 'manual':
                 direction = self.hand_controller.get_direction()
@@ -306,8 +306,13 @@ class Game:
             # Reduce the color depth to 8-bit
             reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
 
+            # Rotate the array by 90 degrees
+            rotated_array = np.rot90(reduced_color_array, -1)
+            # Flip the array across the vertical axis
+            flipped_array = np.fliplr(rotated_array)
+
             # Store the array in self.output_arrays
-            self.output_arrays.append(reduced_color_array)
+            self.output_arrays.append(flipped_array)
             # Print the array to the terminal at intervals
             if time.time() - self.last_print_time >= self.print_interval:
                 print(reduced_color_array)
@@ -322,18 +327,13 @@ class Game:
 
             # Only visualize the array every N frames
             if frame_counter % N == 0:
-                threading.Thread(target=visualize_array, args=(reduced_color_array,)).start()
+                threading.Thread(target=visualize_array, args=(flipped_array,)).start()
 
 
         self.hand_controller.release()
         pygame.quit()
 
-    #def get_output_arrays(self):
-    # Print the first 5 output arrays
-        #for array in self.output_arrays[:50]:
-            #print(array)
-
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 1, 1, 0.1)
+    game = Game(600, 600, 20, 3, 1, 0.1)
     game.run()
     game.get_output_arrays()

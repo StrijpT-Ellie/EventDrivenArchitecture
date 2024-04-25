@@ -105,15 +105,16 @@ while True:
 
     # Display the image with typewriter effect
     for char in response:
-        # Check if adding the next character exceeds the height of the image
-        if next_char_position[0] + 12 > 20 * 12:  # Adjust the spacing as needed
-            next_char_position[1] += 12  # Adjust the line spacing as needed
-            next_char_position[0] = 0
+        # Check if adding the next character exceeds the width of the image
+        if next_char_position[1] + 12 > 20 * 12:  # Adjust the spacing as needed
+            next_char_position[0] += 12  # Adjust the line spacing as needed
+            next_char_position[1] = 0  # Reset column position for new line
         # Put the character on the image and get the next character position
         next_char_position = put_text(mat, char, next_char_position, character_index)
         # Display the updated image
         cv.imshow("text", mat)
         cv.waitKey(100)  # Adjust the delay time as needed for typing speed
+
 
     # Wait for a few seconds after the text is fully displayed
     cv.waitKey(2000)
