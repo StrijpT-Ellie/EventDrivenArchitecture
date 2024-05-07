@@ -1,3 +1,19 @@
+#The script works as a brick pong game with hand controller 
+#The particle collides with the bar and the blocks, bounces off and the blocks disappear
+#Particle movement is optimised and can be faster or slower and the speed decreases when it is at the edge or at the bottom
+#particle emitter emits particles when "p" is pressed and particles last for 10 sec
+#emitted particles destroy blocks and bounce
+#number of blocks can be changed
+
+#consider random block structures appear 
+#consider make blocks denser and require several hits to be destroyed
+#maybe add falling blocks
+
+#add restart function
+#add option to count rounds when all blocks are destroyed
+
+#consider modifying hand controller to control the bar with fingers/gestures
+
 
 import threading
 import pygame
@@ -5,7 +21,6 @@ import random
 import cv2
 import numpy as np
 import mediapipe as mp
-import cv2
 import math
 import matplotlib.pyplot as plt
 import time
@@ -33,7 +48,7 @@ class HandController:
             for hand_landmarks in results.multi_hand_landmarks:
                 self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
 
-            movement_threshold = 0.005  # Adjust this value to change the sensitivity
+            movement_threshold = 0.001  # Adjust this value to change the sensitivity (smaller value fives more sensitivity)
 
             if self.old_hand_landmarks is not None:
                 dx = hand_landmarks.landmark[self.mp_hands.HandLandmark.WRIST].x - self.old_hand_landmarks.landmark[self.mp_hands.HandLandmark.WRIST].x
@@ -53,39 +68,47 @@ class HandController:
         self.cap.release()
         self.hands.close()
         
-
 class Particle:
-    def __init__(self, x, y, speed, direction, color):
+    def __init__(self, x, y, speed, direction, color, lifespan=None):
         self.x = x
         self.y = y
-        self.speed = speed 
-        self.color = color 
-        self.direction = direction
-        self.dx = random.choice([-speed, speed])
-        self.dy = random.choice([-speed, speed])
-        self.ax = random.uniform(-0.1, 0.1)  # Add random initial acceleration
-        self.ay = random.uniform(-0.1, 0.1)  # Add random initial acceleration
-        self.damping = 0.99  # Adjust this value to change the rate of damping
+        self.speed = speed
+        self.color = color
+        self.direction = math.radians(direction)
+        self.dx = self.speed * math.cos(self.direction)
+        self.dy = self.speed * math.sin(self.direction)
+        self.ax = random.uniform(-1, 0)  # Add random initial acceleration
+        self.ay = random.uniform(-1, 1)  # Add random initial acceleration
+        self.damping = 0.98  # Damping for smooth movement
+        self.lifespan = 100
 
     def move(self, width, height):
-        self.dx += self.ax  # update velocity with acceleration
-        self.dy += self.ay  # update velocity with acceleration
-        self.dx *= self.damping  # apply damping to velocity
-        self.dy *= self.damping  # apply damping to velocity
+        # Apply acceleration to velocity
+        self.dx += self.ax
+        self.dy += self.ay
+        
+        # Apply damping to smooth out movement
+        self.dx *= self.damping
+        self.dy *= self.damping
 
         # Predict next position
         next_x = self.x + self.dx
         next_y = self.y + self.dy
 
-        # Check for collision with edges and reverse velocity if necessary
+        # Decrement time_to_live if it's not None
+        if self.lifespan is not None:
+            self.lifespan -= 1
+
+        # Check for collision with edges and adjust velocity to avoid sharp bouncing
         if next_x < 0 or next_x > width:
-            self.dx *= -1
+            self.dx *= -1  # Lose some velocity on collision to reduce jitter
         if next_y < 0 or next_y > height:
-            self.dy *= -1
+            self.dy *= -1  # Lose some velocity on collision to reduce jitter
 
         # Update position
         self.x += self.dx
         self.y += self.dy
+
 
     def update_params(self, speed, direction):
         self.speed = speed
@@ -108,7 +131,7 @@ class ParticleEmitter:
     def generate_particle(self):
         x = self.screen_width
         y = random.randint(0, self.screen_height)
-        speed = random.randint(1, 5)
+        speed = random.randint(1, 10)
         direction = random.randint(0, 360)
         color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         return Particle(x, y, speed, direction, color)
@@ -117,25 +140,39 @@ class ParticleEmitter:
         for _ in range(self.num_particles):
             self.particles.append(self.generate_particle())
 
-    def update(self, blocks):  # Accepts blocks parameter for collision detection
+    def update(self, blocks):
+        blocks_to_remove = []
+        particles_to_remove = []
+
         for particle in self.particles:
             particle.move(self.screen_width, self.screen_height)
 
-            # Check for collision with the main particle
             if self.check_collision(particle, self.main_particle):
-                # Modify the small particle's movement based on the main particle's properties
-                # Change the direction or speed of the small particle
-                # Here, it just reversing the small particle's velocity
-                particle.dx *= -5
-                particle.dy *= -5
+                particle.dx *= -1
+                particle.dy *= -1
 
             for block in blocks:
                 if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
-                    self.particles.remove(particle)
-                    break
+                    blocks_to_remove.append(block)
+                    # Modify the particle's direction or speed as needed upon collision with a block
+                    particle.dx *= -1  # Inverse x velocity (bouncing off the block)
+                    particle.dy *= -1  # Inverse y velocity
+                    break  # Exit loop since block was hit
 
-            if particle.x < 0:
-                self.particles.remove(particle)
+            if particle.x < 0 or particle.y < 0 or particle.x > self.screen_width or particle.y > self.screen_height:
+                particles_to_remove.append(particle)  # Mark the particle for removal if it moves out of bounds
+
+            if particle.lifespan <= 0:  # Check if the particle's lifespan has expired
+                particles_to_remove.append(particle)  # If so, mark it for removal
+
+        for block in blocks_to_remove:
+            if block in blocks:
+                blocks.remove(block)  # Remove blocks that have collided with a particle
+
+        for particle in particles_to_remove:
+            if particle in self.particles:
+                self.particles.remove(particle)  # Remove particles that have moved out of bounds or whose lifespan has expired
+
 
     def draw(self, screen):
         for particle in self.particles:
@@ -166,14 +203,14 @@ class BlockEmitter:
         self.block_size = block_size
         self.blocks_per_row = blocks_per_row
 
-    def trigger(self, num_blocks):
+    def trigger(self, num_blocks, block_width, block_height):
         for i in range(num_blocks):
             row = i // self.blocks_per_row
             column = i % self.blocks_per_row
-            x = column * self.block_size
-            y = row * self.block_size
+            x = column * block_width
+            y = row * block_height
             color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-            block = Block(x, y, self.block_size, self.block_size, color)
+            block = Block(x, y, block_width, block_height, color)
             self.blocks.append(block)
 
 
@@ -182,6 +219,9 @@ class BlockEmitter:
             for particle in particles:
                 if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
                     self.blocks.remove(block)
+                    particle.dy *= -1  # Reverse the y-component of the velocity
+                    particle.dx += random.uniform(-4, 10)  # Add a small random offset to the x-component of the velocity
+                    #particle.y = block.y - 5 # Move the particle out of the block
                     break
 
     def draw(self, screen):
@@ -189,8 +229,31 @@ class BlockEmitter:
             block.draw(screen)
 
 
+class MovingBar:
+    def __init__(self, screen_width, screen_height, bar_width=400, bar_height=20):
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.bar_width = bar_width
+        self.bar_height = bar_height
+        self.x = screen_width // 2
+        self.y = screen_height - bar_height
+        self.speed = 20
+        self.hand_controller = HandController()
+        self.direction = None
+        self.thread = threading.Thread(target=self.update_direction)
+        self.thread.start()
 
+    def update_direction(self, direction):
+        self.direction = direction
 
+    def draw(self, screen):
+        pygame.draw.rect(screen, (255, 255, 255), pygame.Rect(self.x, self.y, self.bar_width, self.bar_height))
+
+    def update(self):
+        if self.direction == 'left' and self.x - self.speed >= 0:
+            self.x -= self.speed
+        elif self.direction == 'right' and self.x + self.bar_width + self.speed <= self.screen_width:
+            self.x += self.speed
      
 class Game:
     def __init__(self, width, height, grid_size, direction, num_particles, speed):
@@ -200,6 +263,7 @@ class Game:
         self.hand_controller = HandController()
         self.width = width
         self.height = height
+        self.moving_bar = MovingBar(self.width, self.height) 
 
         # Frame rate control
         self.frame_rate = 30  # Adjust this value as needed
@@ -207,7 +271,7 @@ class Game:
         self.print_interval = 1.0  # Adjust this value as needed
 
         # Create the main particle
-        self.main_particle = Particle(width // 2, height // 2, speed, direction, (255, 255, 255))
+        self.main_particle = Particle(width // 2, height // 2, speed * 2, direction, (255, 255, 255))
 
         # Create the particle emitter with a reference to the main particle
         self.emitter = ParticleEmitter(self.width, self.height, 25, self.main_particle)
@@ -216,7 +280,7 @@ class Game:
         # Define the particles attribute
         self.particles = [Particle(i % grid_size * (width // grid_size), 
                            i // grid_size * (height // grid_size), 
-                           speed,
+                           speed * 2,
                            direction,  # Add direction
                            (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)))  # color
                   for i in range(num_particles)]
@@ -224,12 +288,12 @@ class Game:
         self.output_arrays = []
         
     def run(self):
-        
         running = True
         emitter = None
-        block_emitter = BlockEmitter(self.width, self.height, 50, 12)
+        block_emitter = BlockEmitter(self.width, self.height, 50, 16)
         frame_counter = 0
         N = 32
+        GRAVITY = 0.2
 
         # Set print options
         np.set_printoptions(threshold=np.inf, linewidth=np.inf)
@@ -242,6 +306,10 @@ class Game:
             for particle in self.particles:
                 pygame.draw.circle(self.screen, (255, 255, 255), (int(particle.x), int(particle.y)), 20)
 
+            # Update and draw the moving bar
+            self.moving_bar.update()
+            self.moving_bar.draw(self.screen)
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -253,36 +321,37 @@ class Game:
                         emitter = ParticleEmitter(self.width, self.height, 25, self.particles[0])  # Assuming the main particle is at index 0
                         emitter.trigger()
 
-
                     elif event.key == pygame.K_b:  # Press "b" to trigger the block emitter
-                        block_emitter.trigger(100)  # Emit 100 blocks
-
-                   
+                        block_emitter.trigger(100, 50, 25)  # Emit 50 blocks
 
             if self.mode == 'autopilot':
                 for particle in self.particles:
-                    particle.update_acceleration(random.uniform(-0.1, 0.1), random.uniform(-0.3, 0.3))  # Add random acceleration to make the particle move at the start in auto mode
+                    # Update the acceleration based on the direction of the particle's movement
+                    #particle.update_acceleration(-particle.dx, -particle.dy + GRAVITY)
+                    #particle.update_acceleration(random.uniform(-1.0, 1.0), random.uniform(-3.0, 3.0))  # Add random acceleration to make the particle move faster in auto mode
+                    particle.update_acceleration(0, 0.5)  # Apply slight downward acceleration for gravity
                     particle.move(self.width, self.height)
+            
             elif self.mode == 'manual':
                 direction = self.hand_controller.get_direction()
-                #print(f"Hand direction: {direction}")  # Debug print
-                move_factor = 50  # Adjust this value to change the movement distance
-                for particle in self.particles:
-                    if direction == 'up':
-                        particle.update_acceleration(0.5, -0.5)  # Increase acceleration upwards
-                        particle.y = max(0, particle.y - particle.speed * move_factor)
-                    elif direction == 'down':
-                        particle.update_acceleration(0.5, 0.5)  # Increase acceleration downwards
-                        particle.y = min(self.height, particle.y + particle.speed * move_factor)
-                    elif direction == 'left':
-                        particle.update_acceleration(-0.5, 0.5)  # Increase acceleration to the left
-                        particle.x = max(0, particle.x - particle.speed * move_factor)
-                    elif direction == 'right':
-                        particle.update_acceleration(0.5, 0.5)  # Increase acceleration to the right
-                        particle.x = min(self.width, particle.x + particle.speed * move_factor)
-                    particle.move(self.width, self.height)  # Move the particle with the updated acceleration
-                    particle.update_acceleration(0, 0)  # Reset acceleration to zero
-                
+                self.moving_bar.update_direction(direction)  # Update the moving bar direction based on the hand direction
+
+            # Move the particles regardless of the mode
+            for particle in self.particles:
+                particle.update_acceleration(0, 0.5)  # 
+                #particle.speed = 10  # Set the speed to a constant value
+                particle.move(self.width, self.height)
+
+                # Check for collision with the moving bar
+                if (self.moving_bar.x < particle.x < self.moving_bar.x + self.moving_bar.bar_width and
+                    self.moving_bar.y < particle.y < self.moving_bar.y + self.moving_bar.bar_height):
+                    particle.dy *= -2  # Reverse the y-component of the velocity
+                    #particle.dx *= -1
+                    particle.dx += random.uniform(-4, 10)  # Add a small random offset to the x-component of the velocity
+
+                    particle.y = self.moving_bar.y - 20  # Move the particle out of the bar
+                    particle.color = (255, 0, 0)  # Change the color of the particle to red
+
 
                 # Update and draw the blocks
                 block_emitter.update(self.particles)
@@ -334,6 +403,6 @@ class Game:
         pygame.quit()
 
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 3, 1, 0.1)
+    game = Game(600, 600, 20, 1, 1, 10) # width, height, grid_size, direction, num_particles, speed
     game.run()
     game.get_output_arrays()

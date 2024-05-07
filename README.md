@@ -1,8 +1,16 @@
 ## Overview
 This repository contains two prototypes developed within the current semester. 
 
+WIP - readme to be updated
+
+
+---
+
+flaskServerWithEffects is depreciated
+=======
 ## Prototype 1: Flask Server with Effects (Deprecated)
 This prototype is a Flask application that renders three.JS code and runs a simulation of the board output. 
+
 
 ### How to Run
 1. Download and launch YOLOv9 in a way that it saves all recognized objects in a text file.
