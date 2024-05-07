@@ -98,7 +98,7 @@ while True:
     response = chain.invoke({"topic": topic})
 
     # Initialize the image
-    mat = np.zeros((20*12, 20*12, 3), dtype=np.uint8)  # Adjust the dimensions as needed
+    mat = np.zeros((1200*12, 600*12, 3), dtype=np.uint8)  # Adjust the dimensions as needed
     
     # Initialize the position for the next character
     next_char_position = [0, 0]

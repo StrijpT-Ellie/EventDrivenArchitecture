@@ -1,12 +1,18 @@
 #The script works as a brick pong game with hand controller 
-#The particle collides with the bar and the blocks
-#Exists a chance of vertical bouncing loop 
-#Must add some random acceleration or direction change when collides with blocks or a bar 
+#The particle collides with the bar and the blocks, bounces off and the blocks disappear
 #Particle movement is optimised and can be faster or slower and the speed decreases when it is at the edge or at the bottom
+#particle emitter emits particles when "p" is pressed and particles last for 10 sec
+#emitted particles destroy blocks and bounce
+#number of blocks can be changed
 
 #consider random block structures appear 
+#consider make blocks denser and require several hits to be destroyed
 #maybe add falling blocks
-#Modify particles from particle emitter collision with blocks and add collision with the bar
+
+#add restart function
+#add option to count rounds when all blocks are destroyed
+
+#consider modifying hand controller to control the bar with fingers/gestures
 
 
 import threading
@@ -63,7 +69,7 @@ class HandController:
         self.hands.close()
         
 class Particle:
-    def __init__(self, x, y, speed, direction, color):
+    def __init__(self, x, y, speed, direction, color, lifespan=None):
         self.x = x
         self.y = y
         self.speed = speed
@@ -74,6 +80,7 @@ class Particle:
         self.ax = random.uniform(-1, 0)  # Add random initial acceleration
         self.ay = random.uniform(-1, 1)  # Add random initial acceleration
         self.damping = 0.98  # Damping for smooth movement
+        self.lifespan = 100
 
     def move(self, width, height):
         # Apply acceleration to velocity
@@ -87,6 +94,10 @@ class Particle:
         # Predict next position
         next_x = self.x + self.dx
         next_y = self.y + self.dy
+
+        # Decrement time_to_live if it's not None
+        if self.lifespan is not None:
+            self.lifespan -= 1
 
         # Check for collision with edges and adjust velocity to avoid sharp bouncing
         if next_x < 0 or next_x > width:
@@ -131,6 +142,7 @@ class ParticleEmitter:
 
     def update(self, blocks):
         blocks_to_remove = []
+        particles_to_remove = []
 
         for particle in self.particles:
             particle.move(self.screen_width, self.screen_height)
@@ -148,11 +160,18 @@ class ParticleEmitter:
                     break  # Exit loop since block was hit
 
             if particle.x < 0 or particle.y < 0 or particle.x > self.screen_width or particle.y > self.screen_height:
-                self.particles.remove(particle)  # Remove the particle if it moves out of bounds
+                particles_to_remove.append(particle)  # Mark the particle for removal if it moves out of bounds
+
+            if particle.lifespan <= 0:  # Check if the particle's lifespan has expired
+                particles_to_remove.append(particle)  # If so, mark it for removal
 
         for block in blocks_to_remove:
             if block in blocks:
                 blocks.remove(block)  # Remove blocks that have collided with a particle
+
+        for particle in particles_to_remove:
+            if particle in self.particles:
+                self.particles.remove(particle)  # Remove particles that have moved out of bounds or whose lifespan has expired
 
 
     def draw(self, screen):
@@ -274,7 +293,6 @@ class Game:
         block_emitter = BlockEmitter(self.width, self.height, 50, 16)
         frame_counter = 0
         N = 32
-        GRAVITY = 0.2
 
         # Set print options
         np.set_printoptions(threshold=np.inf, linewidth=np.inf)
@@ -303,13 +321,11 @@ class Game:
                         emitter.trigger()
 
                     elif event.key == pygame.K_b:  # Press "b" to trigger the block emitter
-                        block_emitter.trigger(100, 50, 25)  # Emit 50 blocks
+                        block_emitter.trigger(100, 40, 20)  # Emit 100 blocks
 
             if self.mode == 'autopilot':
                 for particle in self.particles:
                     # Update the acceleration based on the direction of the particle's movement
-                    #particle.update_acceleration(-particle.dx, -particle.dy + GRAVITY)
-                    #particle.update_acceleration(random.uniform(-1.0, 1.0), random.uniform(-3.0, 3.0))  # Add random acceleration to make the particle move faster in auto mode
                     particle.update_acceleration(0, 0.5)  # Apply slight downward acceleration for gravity
                     particle.move(self.width, self.height)
             
@@ -384,6 +400,6 @@ class Game:
         pygame.quit()
 
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 1, 1, 10) # width, height, grid_size, direction, num_particles, speed
+    game = Game(600, 600, 20, 1, 2, 10) # width, height, grid_size, direction, num_particles, speed
     game.run()
     game.get_output_arrays()

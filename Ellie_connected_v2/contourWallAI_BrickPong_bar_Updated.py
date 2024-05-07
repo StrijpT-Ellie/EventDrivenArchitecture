@@ -293,7 +293,6 @@ class Game:
         block_emitter = BlockEmitter(self.width, self.height, 50, 16)
         frame_counter = 0
         N = 32
-        GRAVITY = 0.2
 
         # Set print options
         np.set_printoptions(threshold=np.inf, linewidth=np.inf)
@@ -322,13 +321,11 @@ class Game:
                         emitter.trigger()
 
                     elif event.key == pygame.K_b:  # Press "b" to trigger the block emitter
-                        block_emitter.trigger(100, 50, 25)  # Emit 50 blocks
+                        block_emitter.trigger(100, 40, 20)  # Emit 100 blocks
 
             if self.mode == 'autopilot':
                 for particle in self.particles:
                     # Update the acceleration based on the direction of the particle's movement
-                    #particle.update_acceleration(-particle.dx, -particle.dy + GRAVITY)
-                    #particle.update_acceleration(random.uniform(-1.0, 1.0), random.uniform(-3.0, 3.0))  # Add random acceleration to make the particle move faster in auto mode
                     particle.update_acceleration(0, 0.5)  # Apply slight downward acceleration for gravity
                     particle.move(self.width, self.height)
             
@@ -403,6 +400,6 @@ class Game:
         pygame.quit()
 
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 1, 1, 10) # width, height, grid_size, direction, num_particles, speed
+    game = Game(600, 600, 20, 1, 2, 10) # width, height, grid_size, direction, num_particles, speed
     game.run()
     game.get_output_arrays()
