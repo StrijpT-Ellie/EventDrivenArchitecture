@@ -1,3 +1,5 @@
+# this was a part of handcontroller oriented on thumb direction recognition
+
 def get_direction(self):
         direction = 'none'  
         ret, frame = self.cap.read()

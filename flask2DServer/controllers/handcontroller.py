@@ -1,3 +1,5 @@
+#this is a handcontroller that can recognise number of fingers up 
+
 import cv2
 import mediapipe as mp
 
