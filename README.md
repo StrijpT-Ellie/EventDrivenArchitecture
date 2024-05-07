@@ -1,5 +1,9 @@
 The repo has two prototypes developed within the scope of the current semester. 
 
+Work In Progress - description to be updated.
+
+---
+
 flaskServerWithEffects is depreciated
 
 It consists of a Flask application rendering three.JS code and running a simulation of the board output 
