@@ -330,6 +330,6 @@ class Game:
             #print(array)
 
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 1, 1, 0.1)
+    game = Game(600, 600, 20, 1, 200, 0.1)
     game.run()
     game.get_output_arrays()

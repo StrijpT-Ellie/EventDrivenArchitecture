@@ -69,7 +69,10 @@ while True:
     # Add the current frame to the long exposure frame
     if long_exposure_frame is None:
         long_exposure_frame = np.zeros_like(enlarged_pixelated, dtype=np.float32)
-    long_exposure_frame = cv2.addWeighted(long_exposure_frame, 0.9, enlarged_pixelated.astype(np.float32), 0.1, 0)
+    long_exposure_frame = cv2.addWeighted(long_exposure_frame, 0.95, enlarged_pixelated.astype(np.float32), 0.05, 0)
+
+    # Apply the waterfall effect by shifting the pixels downward
+    long_exposure_frame = np.roll(long_exposure_frame, 1, axis=0)
 
     # Convert the long exposure frame to 8-bit
     long_exposure_frame_8bit = cv2.convertScaleAbs(long_exposure_frame)
