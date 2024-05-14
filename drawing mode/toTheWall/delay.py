@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from contourwall import ContourWall
 
 # Define the dimensions for the pixelated image
 pixelated_width, pixelated_height = 20, 20
@@ -14,6 +15,10 @@ upper_color = np.array([140, 255, 255])  # Adjust these values for your specific
 # Open the camera
 cap = cv2.VideoCapture(0)
 
+# Initialize ContourWall
+cw = ContourWall()
+cw.single_new_with_port("COM4")
+
 # Initialize a canvas for drawing
 canvas = None
 
@@ -23,6 +28,22 @@ long_exposure_frame = None
 # Previous position of the object
 prev_x, prev_y = None, None
 
+def enhance_contrast(image):
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    cl = clahe.apply(l)
+    limg = cv2.merge((cl, a, b))
+    final = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+    return final
+
+def send_to_contour_wall(cw, pixelated):
+    for i in range(pixelated_height):
+        for j in range(pixelated_width):
+            color = pixelated[i, j]
+            cw.pixels[i, j] = color
+    cw.show()
+
 while True:
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -30,6 +51,9 @@ while True:
     # Check if frame is captured
     if not ret:
         break
+
+    # Enhance the contrast of the frame
+    frame = enhance_contrast(frame)
 
     # Convert frame to HSV color space
     hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -69,13 +93,16 @@ while True:
     # Add the current frame to the long exposure frame
     if long_exposure_frame is None:
         long_exposure_frame = np.zeros_like(enlarged_pixelated, dtype=np.float32)
-    long_exposure_frame = cv2.addWeighted(long_exposure_frame, 0.9, enlarged_pixelated.astype(np.float32), 0.1, 0)
+    long_exposure_frame = cv2.addWeighted(long_exposure_frame, 0.92, enlarged_pixelated.astype(np.float32), 0.1, 0)
 
     # Convert the long exposure frame to 8-bit
     long_exposure_frame_8bit = cv2.convertScaleAbs(long_exposure_frame)
 
     # Combine the canvas with the long exposure frame
     combined_frame = cv2.addWeighted(long_exposure_frame_8bit, 0.7, canvas, 0.3, 0)
+
+    # Send the pixelated data to ContourWall
+    send_to_contour_wall(cw, pixelated)
 
     # Display the combined frame
     cv2.imshow('Pixelated', combined_frame)
@@ -88,3 +115,7 @@ while True:
 cap.release()
 # Destroy all the windows
 cv2.destroyAllWindows()
+
+# Clear ContourWall pixels
+cw.fill_solid(0, 0, 0)
+cw.show()
