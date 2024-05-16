@@ -110,7 +110,7 @@ while True:
         pixelated = apply_wave_effect(pixelated)
         
     # Resize the processed image back to 20x20 pixels
-    pixelated = cv2.resize(pixelated, (20, 20), interpolation=cv2.INTER_LINEAR)  #Change the size here to manipulate the final image size
+    pixelated = cv2.resize(pixelated, (400, 400), interpolation=cv2.INTER_LINEAR)  #Change the size here to manipulate the final image size
 
     # Convert the pixelated image to a NumPy array
     pixelated_np = np.array(pixelated)
