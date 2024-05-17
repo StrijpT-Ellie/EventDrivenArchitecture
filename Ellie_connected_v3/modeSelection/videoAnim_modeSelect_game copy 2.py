@@ -1,10 +1,3 @@
-#This script goes through a sequence of events 
-#Firstly, it launches movement responsive pixelated animation
-#Then, it launches a game mode script if a person is detected for more than 30 seconds
-#Finally, it resets the program after the game mode script ends
-#However, aafter the animation is restarted it keeps lagging and the game mode selection not launched
-#proceeded with videoAnim_modeSelect_game_copy2.py
-
 import cv2
 import threading
 import time
@@ -14,6 +7,8 @@ import random
 import os
 import mediapipe as mp
 from datetime import datetime
+import sys
+import signal
 
 # Pixelated Animation Script
 
@@ -339,7 +334,8 @@ class EventHandler:
 
                         # After the game process ends
                         self.reset()
-                        continue
+                        self.running = False
+                        return  # Exit the current instance to restart the process
 
     def reset(self):
         if self.current_process:
@@ -381,20 +377,29 @@ class EventHandler:
     def start_event_handling(self):
         event_thread = threading.Thread(target=self.handle_events)
         event_thread.start()
+        event_thread.join()  # Ensure the main thread waits for this thread to complete
 
-def main():
+def run_main_logic():
     animation = VideoAnimation()
     mode_selector = ModeSelector()
     handler = EventHandler(animation, mode_selector)
     handler.start_event_handling()
 
     try:
-        while True:
+        while handler.running:
             time.sleep(1)
     except KeyboardInterrupt:
         handler.running = False
         handler.reset()
         print("Stopped")
 
+def signal_handler(sig, frame):
+    print('Exiting...')
+    sys.exit(0)
+
 if __name__ == "__main__":
-    main()
+    signal.signal(signal.SIGINT, signal_handler)
+    while True:
+        run_main_logic()
+        print("[DEBUG] Restarting the main logic")
+        time.sleep(1)  # Add a small delay before restarting the script
