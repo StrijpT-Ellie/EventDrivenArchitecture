@@ -1,3 +1,7 @@
+#this is an older veriosn 
+# use modeSelect_handControl.py
+
+
 import cv2
 import numpy as np
 import os
