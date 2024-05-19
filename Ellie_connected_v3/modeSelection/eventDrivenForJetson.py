@@ -28,7 +28,7 @@ class VideoAnimation:
         self.debug_file = "person_detection_time.txt"
         self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
         self.person_detected = False
-        
+
         with open(self.debug_file, "w") as f:
             f.write("")
 
@@ -321,8 +321,10 @@ class EventHandler:
             self.animation.run()
             if self.animation.person_detected:
                 self.animation.person_detected = False  # Reset flag
+                print("[DEBUG] Person detected for 30 seconds, switching to mode selection.")
                 mode = self.mode_selector.run()
                 if mode is not None:
+                    print(f"[DEBUG] Mode selected: {mode}")
                     if mode == 2:  # Launch game mode
                         print("[DEBUG] Launching game mode script.")
                         self.current_process = subprocess.Popen(["python3", "brickPong.py"])
