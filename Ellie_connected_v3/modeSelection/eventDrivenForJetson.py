@@ -16,7 +16,7 @@ class VideoAnimation:
         self.display_width, self.display_height = 400, 400
         self.lower_color = np.array([100, 150, 150])
         self.upper_color = np.array([140, 255, 255])
-        self.cap = None
+        self.cap = cv2.VideoCapture(0)
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -61,19 +61,10 @@ class VideoAnimation:
                 y = max(0, min(self.pixelated_height - 1, y))
                 positions[index] = (x, y)
 
-    def open_camera(self):
-        for index in range(5):
-            cap = cv2.VideoCapture(index)
-            if cap.isOpened():
-                print(f"[DEBUG] Camera opened at index {index}")
-                return cap
-        print("[ERROR] Unable to open camera at /dev/video0.")
-        return None
-
-    def run(self, stop_event, person_detected_event):
-        self.cap = self.open_camera()
-        if not self.cap:
-            print("[ERROR] Camera could not be opened.")
+    def run(self):
+        self.cap = cv2.VideoCapture(0)
+        if not self.cap.isOpened():
+            print("[ERROR] Unable to open camera at /dev/video0.")
             return
         
         self.canvas = None
@@ -83,7 +74,7 @@ class VideoAnimation:
         self.start_time = None
         self.person_detected = False
 
-        while not stop_event.is_set():
+        while True:
             ret, frame = self.cap.read()
             if not ret:
                 break
@@ -108,7 +99,6 @@ class VideoAnimation:
 
             if self.person_detected_time >= 30:
                 self.person_detected = True
-                person_detected_event.set()
                 break
 
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -145,7 +135,6 @@ class VideoAnimation:
             cv2.imshow('Pixelated', combined_frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
-                stop_event.set()
                 break
 
         self.cap.release()
@@ -258,7 +247,7 @@ class FingerCounter:
            (hand_label == "Right" and landmarks[4][0] < landmarks[3][0]):
             count += 1
         for tip, pip in [(8, 6), (12, 10), (16, 14), (20, 18)]:
-            if landmarks[tip][1] < landmarks[pip][1]):
+            if landmarks[tip][1] < landmarks[pip][1]:
                 count += 1
         return count
 
@@ -274,10 +263,10 @@ class ModeSelector:
     def clear_file(self):
         open(self.output_file_path, 'w').close()
 
-    def run(self, stop_event, selected_mode_event):
+    def run(self):
         selected_mode = None
         current_count = None
-        while self.cap.isOpened() and not stop_event.is_set():
+        while self.cap.isOpened():
             success, image = self.cap.read()
             if not success:
                 print("Ignoring empty camera frame.")
@@ -296,7 +285,6 @@ class ModeSelector:
                 if current_count == finger_count:
                     if self.start_time and (time.time() - self.start_time) > 6:
                         selected_mode = finger_count
-                        selected_mode_event.set()
                         break
                 else:
                     current_count = finger_count
@@ -312,7 +300,6 @@ class ModeSelector:
             display.display_modes(selected_mode=finger_count if current_count == finger_count and (time.time() - self.start_time) > 3 else None)
 
             if cv2.waitKey(5) & 0xFF == 27:
-                stop_event.set()
                 break
 
         self.cap.release()
@@ -330,50 +317,26 @@ class EventHandler:
         self.mode_selector = mode_selector
         self.current_process = None
         self.running = True
-        self.stop_event = threading.Event()
-        self.person_detected_event = threading.Event()
-        self.selected_mode_event = threading.Event()
 
     def handle_events(self):
-        animation_thread = threading.Thread(target=self.animation.run, args=(self.stop_event, self.person_detected_event))
-        mode_selector_thread = None
+        self.animation.run()
+        if self.animation.person_detected:
+            self.animation.person_detected = False  # Reset flag
+            mode = self.mode_selector.run()
+            if mode is not None:
+                if mode == 2:  # Launch game mode
+                    print("[DEBUG] Launching game mode script.")
+                    self.current_process = subprocess.Popen(["python3", "brickPong.py"])
 
-        animation_thread.start()
+                    # Start monitoring game activity in a separate thread
+                    activity_thread = threading.Thread(target=self.monitor_game_activity)
+                    activity_thread.start()
+                    activity_thread.join()
 
-        while self.running:
-            self.person_detected_event.wait()
-            if self.person_detected_event.is_set():
-                print("[DEBUG] Person detected, switching to mode selection.")
-                self.person_detected_event.clear()
-                self.stop_event.set()
-                animation_thread.join()
-                self.stop_event.clear()
-                
-                mode_selector_thread = threading.Thread(target=self.mode_selector.run, args=(self.stop_event, self.selected_mode_event))
-                mode_selector_thread.start()
-                
-                self.selected_mode_event.wait()
-                if self.selected_mode_event.is_set():
-                    selected_mode = self.mode_selector.run(self.stop_event, self.selected_mode_event)
-                    print(f"[DEBUG] Mode {selected_mode} selected.")
-                    if selected_mode == 2:  # Launch game mode
-                        print("[DEBUG] Launching game mode script.")
-                        self.current_process = subprocess.Popen(["python3", "brickPong.py"])
-
-                        # Start monitoring game activity in a separate thread
-                        activity_thread = threading.Thread(target=self.monitor_game_activity)
-                        activity_thread.start()
-                        activity_thread.join()
-
-                        # After the game process ends
-                        self.reset()
-                        self.running = False
-                        return  # Exit the current instance to restart the process
-
-        if animation_thread.is_alive():
-            animation_thread.join()
-        if mode_selector_thread and mode_selector_thread.is_alive():
-            mode_selector_thread.join()
+                    # After the game process ends
+                    self.reset()
+                    self.running = False
+                    return  # Exit the current instance to restart the process
 
     def reset(self):
         if self.current_process:
