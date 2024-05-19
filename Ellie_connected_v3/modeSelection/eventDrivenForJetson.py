@@ -10,6 +10,8 @@ from datetime import datetime
 import sys
 import signal
 
+# Pixelated Animation Script
+
 class VideoAnimation:
     def __init__(self):
         self.pixelated_width, self.pixelated_height = 20, 20
@@ -26,7 +28,7 @@ class VideoAnimation:
         self.debug_file = "person_detection_time.txt"
         self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
         self.person_detected = False
-
+        
         with open(self.debug_file, "w") as f:
             f.write("")
 
@@ -62,11 +64,7 @@ class VideoAnimation:
                 positions[index] = (x, y)
 
     def run(self):
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            print("[ERROR] Unable to open camera at /dev/video0.")
-            return
-        
+        self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -247,7 +245,7 @@ class FingerCounter:
            (hand_label == "Right" and landmarks[4][0] < landmarks[3][0]):
             count += 1
         for tip, pip in [(8, 6), (12, 10), (16, 14), (20, 18)]:
-            if landmarks[tip][1] < landmarks[pip][1]):
+            if landmarks[tip][1] < landmarks[pip][1]:
                 count += 1
         return count
 
@@ -319,24 +317,25 @@ class EventHandler:
         self.running = True
 
     def handle_events(self):
-        self.animation.run()
-        if self.animation.person_detected:
-            self.animation.person_detected = False  # Reset flag
-            mode = self.mode_selector.run()
-            if mode is not None:
-                if mode == 2:  # Launch game mode
-                    print("[DEBUG] Launching game mode script.")
-                    self.current_process = subprocess.Popen(["python3", "brickPong.py"])
+        while self.running:
+            self.animation.run()
+            if self.animation.person_detected:
+                self.animation.person_detected = False  # Reset flag
+                mode = self.mode_selector.run()
+                if mode is not None:
+                    if mode == 2:  # Launch game mode
+                        print("[DEBUG] Launching game mode script.")
+                        self.current_process = subprocess.Popen(["python3", "brickPong.py"])
 
-                    # Start monitoring game activity in a separate thread
-                    activity_thread = threading.Thread(target=self.monitor_game_activity)
-                    activity_thread.start()
-                    activity_thread.join()
+                        # Start monitoring game activity in a separate thread
+                        activity_thread = threading.Thread(target=self.monitor_game_activity)
+                        activity_thread.start()
+                        activity_thread.join()
 
-                    # After the game process ends
-                    self.reset()
-                    self.running = False
-                    return  # Exit the current instance to restart the process
+                        # After the game process ends
+                        self.reset()
+                        self.running = False
+                        return  # Exit the current instance to restart the process
 
     def reset(self):
         if self.current_process:
