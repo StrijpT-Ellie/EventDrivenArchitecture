@@ -10,7 +10,6 @@ from datetime import datetime
 import sys
 import signal
 
-# Pixelated Animation Script
 class VideoAnimation:
     def __init__(self):
         self.pixelated_width, self.pixelated_height = 20, 20
@@ -61,6 +60,15 @@ class VideoAnimation:
                 x = max(0, min(self.pixelated_width - 1, x))
                 y = max(0, min(self.pixelated_height - 1, y))
                 positions[index] = (x, y)
+
+    def open_camera(self):
+        for index in range(5):
+            cap = cv2.VideoCapture(index)
+            if cap.isOpened():
+                print(f"[DEBUG] Camera opened at index {index}")
+                return cap
+        print("[ERROR] Unable to open camera at /dev/video0.")
+        return None
 
     def run(self, stop_event, person_detected_event):
         self.cap = self.open_camera()
@@ -144,13 +152,6 @@ class VideoAnimation:
         cv2.destroyAllWindows()
         with open(self.debug_file, "w") as f:
             f.write("")
-
-    def open_camera(self):
-        cap = cv2.VideoCapture(0)
-        if cap.isOpened():
-            return cap
-        print("[ERROR] Unable to open camera at /dev/video0.")
-        return None
 
 class CharacterLoader:
     def __init__(self):
@@ -257,7 +258,7 @@ class FingerCounter:
            (hand_label == "Right" and landmarks[4][0] < landmarks[3][0]):
             count += 1
         for tip, pip in [(8, 6), (12, 10), (16, 14), (20, 18)]:
-            if landmarks[tip][1] < landmarks[pip][1]:
+            if landmarks[tip][1] < landmarks[pip][1]):
                 count += 1
         return count
 
