@@ -63,10 +63,12 @@ class VideoAnimation:
                 positions[index] = (x, y)
 
     def run(self):
-        self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
+        self.cap = cv2.VideoCapture(0)  # Try the default camera
         if not self.cap.isOpened():
-            print("[ERROR] Failed to open the camera.")
-            return
+            self.cap = cv2.VideoCapture(1)  # Try the next camera
+            if not self.cap.isOpened():
+                print("[ERROR] Failed to open the camera.")
+                return
 
         self.canvas = None
         self.long_exposure_frame = None
@@ -257,8 +259,10 @@ class ModeSelector:
     def __init__(self):
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
-            print("[ERROR] Failed to open the camera.")
-            sys.exit(1)
+            self.cap = cv2.VideoCapture(1)  # Try the next camera
+            if not self.cap.isOpened():
+                print("[ERROR] Failed to open the camera.")
+                sys.exit(1)
         self.detector = HandDetector()
         self.counter = FingerCounter()
         self.output_file_path = "finger_count_output.txt"
