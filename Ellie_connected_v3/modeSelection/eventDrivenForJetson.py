@@ -18,7 +18,7 @@ class VideoAnimation:
         self.display_width, self.display_height = 400, 400
         self.lower_color = np.array([100, 150, 150])
         self.upper_color = np.array([140, 255, 255])
-        self.cap = cv2.VideoCapture(0)
+        self.cap = None
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -64,7 +64,11 @@ class VideoAnimation:
                 positions[index] = (x, y)
 
     def run(self, stop_event, person_detected_event):
-        self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
+        self.cap = self.open_camera()
+        if not self.cap:
+            print("[ERROR] Camera could not be opened.")
+            return
+        
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -141,6 +145,13 @@ class VideoAnimation:
         cv2.destroyAllWindows()
         with open(self.debug_file, "w") as f:
             f.write("")
+
+    def open_camera(self):
+        for index in range(5):
+            cap = cv2.VideoCapture(index)
+            if cap.isOpened():
+                return cap
+        return None
 
 class CharacterLoader:
     def __init__(self):
