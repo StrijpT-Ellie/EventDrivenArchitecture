@@ -28,6 +28,7 @@ class VideoAnimation:
         self.debug_file = "person_detection_time.txt"
         self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
         self.person_detected = False
+        self.lock = threading.Lock()
 
         with open(self.debug_file, "w") as f:
             f.write("")
@@ -96,7 +97,8 @@ class VideoAnimation:
                 f.write(debug_statement + "\n")
 
             if self.person_detected_time >= 30:
-                self.person_detected = True
+                with self.lock:
+                    self.person_detected = True
                 break
 
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -319,25 +321,26 @@ class EventHandler:
     def handle_events(self):
         while self.running:
             self.animation.run()
-            if self.animation.person_detected:
-                self.animation.person_detected = False  # Reset flag
-                print("[DEBUG] Person detected for 30 seconds, switching to mode selection.")
-                mode = self.mode_selector.run()
-                if mode is not None:
-                    print(f"[DEBUG] Mode selected: {mode}")
-                    if mode == 2:  # Launch game mode
-                        print("[DEBUG] Launching game mode script.")
-                        self.current_process = subprocess.Popen(["python3", "brickPong.py"])
+            with self.animation.lock:
+                if self.animation.person_detected:
+                    self.animation.person_detected = False  # Reset flag
+                    print("[DEBUG] Person detected for 30 seconds, switching to mode selection.")
+                    mode = self.mode_selector.run()
+                    if mode is not None:
+                        print(f"[DEBUG] Mode selected: {mode}")
+                        if mode == 2:  # Launch game mode
+                            print("[DEBUG] Launching game mode script.")
+                            self.current_process = subprocess.Popen(["python3", "brickPong.py"])
 
-                        # Start monitoring game activity in a separate thread
-                        activity_thread = threading.Thread(target=self.monitor_game_activity)
-                        activity_thread.start()
-                        activity_thread.join()
+                            # Start monitoring game activity in a separate thread
+                            activity_thread = threading.Thread(target=self.monitor_game_activity)
+                            activity_thread.start()
+                            activity_thread.join()
 
-                        # After the game process ends
-                        self.reset()
-                        self.running = False
-                        return  # Exit the current instance to restart the process
+                            # After the game process ends
+                            self.reset()
+                            self.running = False
+                            return  # Exit the current instance to restart the process
 
     def reset(self):
         if self.current_process:
