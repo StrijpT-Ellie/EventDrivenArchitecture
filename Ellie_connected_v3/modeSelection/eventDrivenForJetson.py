@@ -11,7 +11,6 @@ import sys
 import signal
 
 # Pixelated Animation Script
-
 class VideoAnimation:
     def __init__(self):
         self.pixelated_width, self.pixelated_height = 20, 20
@@ -147,10 +146,10 @@ class VideoAnimation:
             f.write("")
 
     def open_camera(self):
-        for index in range(5):
-            cap = cv2.VideoCapture(index)
-            if cap.isOpened():
-                return cap
+        cap = cv2.VideoCapture(0)
+        if cap.isOpened():
+            return cap
+        print("[ERROR] Unable to open camera at /dev/video0.")
         return None
 
 class CharacterLoader:
