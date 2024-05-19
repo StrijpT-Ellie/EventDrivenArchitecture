@@ -65,6 +65,10 @@ class VideoAnimation(mp.Process):
 
     def run(self):
         self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
+        if not self.cap.isOpened():
+            print("[ERROR] Unable to open camera")
+            return
+
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -74,6 +78,7 @@ class VideoAnimation(mp.Process):
         while self.running:
             ret, frame = self.cap.read()
             if not ret:
+                print("[ERROR] Failed to capture frame")
                 break
 
             frame = self.enhance_contrast(frame)
@@ -410,4 +415,4 @@ if __name__ == "__main__":
     while True:
         run_main_logic()
         print("[DEBUG] Restarting the main logic")
-        time.sleep(1)  # Add a small delay before restarting the script
+        time.sleep(5)  # Add a small delay before restarting the script to ensure resources are released
