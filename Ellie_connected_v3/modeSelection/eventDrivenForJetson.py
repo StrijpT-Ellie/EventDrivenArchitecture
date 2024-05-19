@@ -11,13 +11,14 @@ import sys
 import signal
 
 # Pixelated Animation Script
+
 class VideoAnimation:
     def __init__(self):
         self.pixelated_width, self.pixelated_height = 20, 20
         self.display_width, self.display_height = 400, 400
         self.lower_color = np.array([100, 150, 150])
         self.upper_color = np.array([140, 255, 255])
-        self.cap = None
+        self.cap = cv2.VideoCapture(0)
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -27,7 +28,7 @@ class VideoAnimation:
         self.debug_file = "person_detection_time.txt"
         self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
         self.person_detected = False
-        
+
         with open(self.debug_file, "w") as f:
             f.write("")
 
@@ -63,13 +64,7 @@ class VideoAnimation:
                 positions[index] = (x, y)
 
     def run(self):
-        self.cap = cv2.VideoCapture(0)  # Try the default camera
-        if not self.cap.isOpened():
-            self.cap = cv2.VideoCapture(1)  # Try the next camera
-            if not self.cap.isOpened():
-                print("[ERROR] Failed to open the camera.")
-                return
-
+        self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
         self.canvas = None
         self.long_exposure_frame = None
         self.motion_detected = False
@@ -80,7 +75,6 @@ class VideoAnimation:
         while True:
             ret, frame = self.cap.read()
             if not ret:
-                print("[ERROR] Failed to read frame from the camera.")
                 break
 
             frame = self.enhance_contrast(frame)
@@ -258,11 +252,6 @@ class FingerCounter:
 class ModeSelector:
     def __init__(self):
         self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            self.cap = cv2.VideoCapture(1)  # Try the next camera
-            if not self.cap.isOpened():
-                print("[ERROR] Failed to open the camera.")
-                sys.exit(1)
         self.detector = HandDetector()
         self.counter = FingerCounter()
         self.output_file_path = "finger_count_output.txt"
@@ -278,7 +267,7 @@ class ModeSelector:
         while self.cap.isOpened():
             success, image = self.cap.read()
             if not success:
-                print("[ERROR] Ignoring empty camera frame.")
+                print("Ignoring empty camera frame.")
                 continue
 
             image, results = self.detector.process(image)
