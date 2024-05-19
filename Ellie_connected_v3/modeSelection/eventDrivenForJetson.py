@@ -29,6 +29,7 @@ class VideoAnimation:
         self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
         self.person_detected = False
         self.lock = threading.Lock()
+        self.running = True
 
         with open(self.debug_file, "w") as f:
             f.write("")
@@ -73,7 +74,7 @@ class VideoAnimation:
         self.start_time = None
         self.person_detected = False
 
-        while True:
+        while self.running:
             ret, frame = self.cap.read()
             if not ret:
                 break
