@@ -325,7 +325,7 @@ class EventHandler:
                 if mode is not None:
                     if mode == 2:  # Launch game mode
                         print("[DEBUG] Launching game mode script.")
-                        self.current_process = subprocess.Popen(["python", "brickPong.py"])
+                        self.current_process = subprocess.Popen(["python3", "brickPong.py"])
 
                         # Start monitoring game activity in a separate thread
                         activity_thread = threading.Thread(target=self.monitor_game_activity)
