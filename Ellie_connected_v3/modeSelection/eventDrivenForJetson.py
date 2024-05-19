@@ -63,7 +63,7 @@ class VideoAnimation:
                 y = max(0, min(self.pixelated_height - 1, y))
                 positions[index] = (x, y)
 
-    def run(self):
+    def run(self, stop_event, person_detected_event):
         self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
         self.canvas = None
         self.long_exposure_frame = None
@@ -72,7 +72,7 @@ class VideoAnimation:
         self.start_time = None
         self.person_detected = False
 
-        while True:
+        while not stop_event.is_set():
             ret, frame = self.cap.read()
             if not ret:
                 break
@@ -97,6 +97,7 @@ class VideoAnimation:
 
             if self.person_detected_time >= 30:
                 self.person_detected = True
+                person_detected_event.set()
                 break
 
             gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -133,6 +134,7 @@ class VideoAnimation:
             cv2.imshow('Pixelated', combined_frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
+                stop_event.set()
                 break
 
         self.cap.release()
@@ -261,10 +263,10 @@ class ModeSelector:
     def clear_file(self):
         open(self.output_file_path, 'w').close()
 
-    def run(self):
+    def run(self, stop_event, selected_mode_event):
         selected_mode = None
         current_count = None
-        while self.cap.isOpened():
+        while self.cap.isOpened() and not stop_event.is_set():
             success, image = self.cap.read()
             if not success:
                 print("Ignoring empty camera frame.")
@@ -283,6 +285,7 @@ class ModeSelector:
                 if current_count == finger_count:
                     if self.start_time and (time.time() - self.start_time) > 6:
                         selected_mode = finger_count
+                        selected_mode_event.set()
                         break
                 else:
                     current_count = finger_count
@@ -298,6 +301,7 @@ class ModeSelector:
             display.display_modes(selected_mode=finger_count if current_count == finger_count and (time.time() - self.start_time) > 3 else None)
 
             if cv2.waitKey(5) & 0xFF == 27:
+                stop_event.set()
                 break
 
         self.cap.release()
@@ -315,15 +319,33 @@ class EventHandler:
         self.mode_selector = mode_selector
         self.current_process = None
         self.running = True
+        self.stop_event = threading.Event()
+        self.person_detected_event = threading.Event()
+        self.selected_mode_event = threading.Event()
 
     def handle_events(self):
+        animation_thread = threading.Thread(target=self.animation.run, args=(self.stop_event, self.person_detected_event))
+        mode_selector_thread = None
+
+        animation_thread.start()
+
         while self.running:
-            self.animation.run()
-            if self.animation.person_detected:
-                self.animation.person_detected = False  # Reset flag
-                mode = self.mode_selector.run()
-                if mode is not None:
-                    if mode == 2:  # Launch game mode
+            self.person_detected_event.wait()
+            if self.person_detected_event.is_set():
+                print("[DEBUG] Person detected, switching to mode selection.")
+                self.person_detected_event.clear()
+                self.stop_event.set()
+                animation_thread.join()
+                self.stop_event.clear()
+                
+                mode_selector_thread = threading.Thread(target=self.mode_selector.run, args=(self.stop_event, self.selected_mode_event))
+                mode_selector_thread.start()
+                
+                self.selected_mode_event.wait()
+                if self.selected_mode_event.is_set():
+                    selected_mode = self.mode_selector.run(self.stop_event, self.selected_mode_event)
+                    print(f"[DEBUG] Mode {selected_mode} selected.")
+                    if selected_mode == 2:  # Launch game mode
                         print("[DEBUG] Launching game mode script.")
                         self.current_process = subprocess.Popen(["python3", "brickPong.py"])
 
@@ -336,6 +358,11 @@ class EventHandler:
                         self.reset()
                         self.running = False
                         return  # Exit the current instance to restart the process
+
+        if animation_thread.is_alive():
+            animation_thread.join()
+        if mode_selector_thread and mode_selector_thread.is_alive():
+            mode_selector_thread.join()
 
     def reset(self):
         if self.current_process:
