@@ -19,6 +19,12 @@ class VideoAnimation(mp.Process):
         self.upper_color = np.array([140, 255, 255])
         self.person_detected_flag = person_detected_flag
         self.running = True
+        self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
+        self.fgbg = cv2.createBackgroundSubtractorMOG2()
+        self.debug_file = "person_detection_time.txt"
+
+        with open(self.debug_file, "w") as f:
+            f.write("")
 
     def enhance_contrast(self, image):
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
@@ -61,7 +67,6 @@ class VideoAnimation(mp.Process):
             self.canvas = None
             self.long_exposure_frame = None
             self.motion_detected = False
-            self.fgbg = cv2.createBackgroundSubtractorMOG2()
             self.person_detected_time = 0
             self.start_time = None
 
@@ -129,7 +134,8 @@ class VideoAnimation(mp.Process):
                     break
 
         finally:
-            self.cap.release()
+            if hasattr(self, 'cap') and self.cap.isOpened():
+                self.cap.release()
             cv2.destroyAllWindows()
 
 
