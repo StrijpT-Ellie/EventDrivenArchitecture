@@ -17,20 +17,8 @@ class VideoAnimation(mp.Process):
         self.display_width, self.display_height = 400, 400
         self.lower_color = np.array([100, 150, 150])
         self.upper_color = np.array([140, 255, 255])
-        self.cap = cv2.VideoCapture(0)
-        self.canvas = None
-        self.long_exposure_frame = None
-        self.motion_detected = False
-        self.fgbg = cv2.createBackgroundSubtractorMOG2()
-        self.person_detected_time = 0
-        self.start_time = None
-        self.debug_file = "person_detection_time.txt"
-        self.pixel_positions = [(j, i) for i in range(self.pixelated_height) for j in range(self.pixelated_width)]
         self.person_detected_flag = person_detected_flag
         self.running = True
-
-        with open(self.debug_file, "w") as f:
-            f.write("")
 
     def enhance_contrast(self, image):
         lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
@@ -64,86 +52,85 @@ class VideoAnimation(mp.Process):
                 positions[index] = (x, y)
 
     def run(self):
-        self.cap = cv2.VideoCapture(0)  # Reinitialize the video capture
-        if not self.cap.isOpened():
-            print("[ERROR] Unable to open camera")
-            return
+        try:
+            self.cap = cv2.VideoCapture(0)  # Initialize the video capture
+            if not self.cap.isOpened():
+                print("[ERROR] Unable to open camera")
+                return
 
-        self.canvas = None
-        self.long_exposure_frame = None
-        self.motion_detected = False
-        self.person_detected_time = 0
-        self.start_time = None
+            self.canvas = None
+            self.long_exposure_frame = None
+            self.motion_detected = False
+            self.fgbg = cv2.createBackgroundSubtractorMOG2()
+            self.person_detected_time = 0
+            self.start_time = None
 
-        while self.running:
-            ret, frame = self.cap.read()
-            if not ret:
-                print("[ERROR] Failed to capture frame")
-                break
+            while self.running:
+                ret, frame = self.cap.read()
+                if not ret:
+                    print("[ERROR] Failed to capture frame")
+                    break
 
-            frame = self.enhance_contrast(frame)
-            fgmask = self.fgbg.apply(frame)
-            contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            self.motion_detected = any(cv2.contourArea(contour) > 500 for contour in contours)
+                frame = self.enhance_contrast(frame)
+                fgmask = self.fgbg.apply(frame)
+                contours, _ = cv2.findContours(fgmask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                self.motion_detected = any(cv2.contourArea(contour) > 500 for contour in contours)
 
-            if self.motion_detected:
-                if self.start_time is None:
-                    self.start_time = time.time()
-                self.person_detected_time = time.time() - self.start_time
-            else:
-                self.start_time = None
-                self.person_detected_time = 0
+                if self.motion_detected:
+                    if self.start_time is None:
+                        self.start_time = time.time()
+                    self.person_detected_time = time.time() - self.start_time
+                else:
+                    self.start_time = None
+                    self.person_detected_time = 0
 
-            debug_statement = f'Person detected for: {self.person_detected_time:.2f} seconds'
-            print(debug_statement)
-            with open(self.debug_file, "a") as f:
-                f.write(debug_statement + "\n")
+                debug_statement = f'Person detected for: {self.person_detected_time:.2f} seconds'
+                print(debug_statement)
 
-            if self.person_detected_time >= 30:
-                self.person_detected_flag.value = True
-                break
+                if self.person_detected_time >= 30:
+                    self.person_detected_flag.value = True
+                    break
 
-            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            gray_frame = cv2.GaussianBlur(gray_frame, (21, 21), 0)
-            hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv_frame, self.lower_color, self.upper_color)
-            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray_frame = cv2.GaussianBlur(gray_frame, (21, 21), 0)
+                hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                mask = cv2.inRange(hsv_frame, self.lower_color, self.upper_color)
+                contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-            pixelated = cv2.resize(frame, (self.pixelated_width, self.pixelated_height), interpolation=cv2.INTER_LINEAR)
-            pixelated = self.quantize_colors(pixelated)
-            if self.canvas is None:
-                self.canvas = np.zeros((self.display_height, self.display_width, 3), dtype=np.uint8)
+                pixelated = cv2.resize(frame, (self.pixelated_width, self.pixelated_height), interpolation=cv2.INTER_LINEAR)
+                pixelated = self.quantize_colors(pixelated)
+                if self.canvas is None:
+                    self.canvas = np.zeros((self.display_height, self.display_width, 3), dtype=np.uint8)
 
-            circle_frame = np.zeros((self.display_height, self.display_width, 3), dtype=np.uint8)
-            self.apply_floating_effect(self.pixel_positions)
+                circle_frame = np.zeros((self.display_height, self.display_width, 3), dtype=np.uint8)
+                self.apply_floating_effect(self.pixel_positions)
 
-            radius = self.display_width // self.pixelated_width // 2
-            spacing_x = self.display_width // self.pixelated_width
-            spacing_y = self.display_height // self.pixelated_height
+                radius = self.display_width // self.pixelated_width // 2
+                spacing_x = self.display_width // self.pixelated_width
+                spacing_y = self.display_height // self.pixelated_height
 
-            for idx, (x, y) in enumerate(self.pixel_positions):
-                color = pixelated[y, x]
-                center_x = x * spacing_x + spacing_x // 2
-                center_y = y * spacing_y + spacing_y // 2
-                cv2.circle(circle_frame, (center_x, center_y), radius, color.tolist(), -1)
+                for idx, (x, y) in enumerate(self.pixel_positions):
+                    color = pixelated[y, x]
+                    center_x = x * spacing_x + spacing_x // 2
+                    center_y = y * spacing_y + spacing_y // 2
+                    cv2.circle(circle_frame, (center_x, center_y), radius, color.tolist(), -1)
 
-            if self.long_exposure_frame is None:
-                self.long_exposure_frame = np.zeros_like(circle_frame, dtype=np.float32)
-            self.long_exposure_frame = cv2.addWeighted(self.long_exposure_frame, 0.95, circle_frame.astype(np.float32), 0.05, 0)
-            self.long_exposure_frame = np.roll(self.long_exposure_frame, 1, axis=0)
-            long_exposure_frame_8bit = cv2.convertScaleAbs(self.long_exposure_frame)
-            combined_frame = cv2.addWeighted(long_exposure_frame_8bit, 0.7, self.canvas, 0.3, 0)
+                if self.long_exposure_frame is None:
+                    self.long_exposure_frame = np.zeros_like(circle_frame, dtype=np.float32)
+                self.long_exposure_frame = cv2.addWeighted(self.long_exposure_frame, 0.95, circle_frame.astype(np.float32), 0.05, 0)
+                self.long_exposure_frame = np.roll(self.long_exposure_frame, 1, axis=0)
+                long_exposure_frame_8bit = cv2.convertScaleAbs(self.long_exposure_frame)
+                combined_frame = cv2.addWeighted(long_exposure_frame_8bit, 0.7, self.canvas, 0.3, 0)
 
-            cv2.imshow('Pixelated', combined_frame)
+                cv2.imshow('Pixelated', combined_frame)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                self.running = False
-                break
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    self.running = False
+                    break
 
-        self.cap.release()
-        cv2.destroyAllWindows()
-        with open(self.debug_file, "w") as f:
-            f.write("")
+        finally:
+            self.cap.release()
+            cv2.destroyAllWindows()
 
 
 class CharacterLoader:
@@ -263,59 +250,72 @@ class FingerCounter:
 class ModeSelector(mp.Process):
     def __init__(self, selected_mode_pipe):
         super(ModeSelector, self).__init__()
-        self.cap = cv2.VideoCapture(0)
-        self.detector = HandDetector()
-        self.counter = FingerCounter()
-        self.output_file_path = "finger_count_output.txt"
-        self.clear_file()
-        self.start_time = None
         self.selected_mode_pipe = selected_mode_pipe
+
+    def run(self):
+        try:
+            self.cap = cv2.VideoCapture(0)  # Initialize the video capture
+            if not self.cap.isOpened():
+                print("[ERROR] Unable to open camera")
+                self.selected_mode_pipe.send(None)
+                return
+
+            self.detector = HandDetector()
+            self.counter = FingerCounter()
+            self.output_file_path = "finger_count_output.txt"
+            self.clear_file()
+            self.start_time = None
+
+            selected_mode = None
+            current_count = None
+
+            while self.cap.isOpened():
+                success, image = self.cap.read()
+                if not success:
+                    print("Ignoring empty camera frame.")
+                    continue
+
+                image, results = self.detector.process(image)
+
+                if results.multi_hand_landmarks:
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        self.detector.draw_landmarks(image, hand_landmarks)
+
+                finger_count = self.counter.count_fingers(results)
+                self.write_to_file(finger_count)
+
+                if finger_count in [1, 2, 3]:
+                    if current_count == finger_count:
+                        if self.start_time and (time.time() - self.start_time) > 6:
+                            selected_mode = finger_count
+                            break
+                    else:
+                        current_count = finger_count
+                        self.start_time = time.time()
+                else:
+                    current_count = None
+                    self.start_time = None
+
+                cv2.putText(image, str(finger_count), (50, 450), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 10)
+                cv2.imshow('MediaPipe Hands', image)
+
+                display = TextDisplay(TextWriter(CharacterLoader()))
+                display.display_modes(selected_mode=finger_count if current_count == finger_count and (time.time() - self.start_time) > 3 else None)
+
+                if cv2.waitKey(5) & 0xFF == 27:
+                    break
+
+            self.cap.release()
+            cv2.destroyAllWindows()
+            self.selected_mode_pipe.send(selected_mode)
+
+        finally:
+            if hasattr(self, 'cap') and self.cap.isOpened():
+                self.cap.release()
+            cv2.destroyAllWindows()
 
     def clear_file(self):
         open(self.output_file_path, 'w').close()
-
-    def run(self):
-        selected_mode = None
-        current_count = None
-        while self.cap.isOpened():
-            success, image = self.cap.read()
-            if not success:
-                print("Ignoring empty camera frame.")
-                continue
-
-            image, results = self.detector.process(image)
-
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    self.detector.draw_landmarks(image, hand_landmarks)
-
-            finger_count = self.counter.count_fingers(results)
-            self.write_to_file(finger_count)
-
-            if finger_count in [1, 2, 3]:
-                if current_count == finger_count:
-                    if self.start_time and (time.time() - self.start_time) > 6:
-                        selected_mode = finger_count
-                        break
-                else:
-                    current_count = finger_count
-                    self.start_time = time.time()
-            else:
-                current_count = None
-                self.start_time = None
-
-            cv2.putText(image, str(finger_count), (50, 450), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 10)
-            cv2.imshow('MediaPipe Hands', image)
-
-            display = TextDisplay(TextWriter(CharacterLoader()))
-            display.display_modes(selected_mode=finger_count if current_count == finger_count and (time.time() - self.start_time) > 3 else None)
-
-            if cv2.waitKey(5) & 0xFF == 27:
-                break
-
-        self.cap.release()
-        cv2.destroyAllWindows()
-        self.selected_mode_pipe.send(selected_mode)
 
     def write_to_file(self, finger_count):
         with open(self.output_file_path, "a") as output_file:
