@@ -247,7 +247,7 @@ class FingerCounter:
            (hand_label == "Right" and landmarks[4][0] < landmarks[3][0]):
             count += 1
         for tip, pip in [(8, 6), (12, 10), (16, 14), (20, 18)]:
-            if landmarks[tip][1] < landmarks[pip][1]:
+            if landmarks[tip][1] < landmarks[pip][1]):
                 count += 1
         return count
 
