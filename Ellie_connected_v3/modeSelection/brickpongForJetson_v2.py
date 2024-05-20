@@ -73,9 +73,9 @@ class Particle:
         if self.lifespan is not None:
             self.lifespan -= 1
 
-        if next_x < 0 or next_x > width:
+        if next_x < 0 or next_x >= width:
             self.dx *= -1
-        if next_y < 0 or next_y > height:
+        if next_y < 0 or next_y >= height:
             self.dy *= -1
 
         self.x += self.dx
@@ -92,62 +92,52 @@ class Particle:
         self.ay = ay * self.damping
 
 class ParticleEmitter:
-    def __init__(self, screen_width, screen_height, num_particles, main_particle):
+    def __init__(self, screen_width, screen_height, main_particle):
         self.screen_width = screen_width
         self.screen_height = screen_height
-        self.num_particles = num_particles
-        self.particles = []
         self.main_particle = main_particle
+        self.particle = None
 
     def generate_particle(self):
         x = self.screen_width // 2
         y = self.screen_height // 2
-        speed = random.randint(1, 10)
+        speed = random.uniform(0.5, 1.5)
         direction = random.randint(0, 360)
-        color = (255, 255, 255)
+        color = (0, 255, 0)
         lifespan = 300
         return Particle(x, y, speed, direction, color, lifespan)
 
     def trigger(self):
-        if len(self.particles) < self.num_particles:
-            for _ in range(self.num_particles - len(self.particles)):
-                self.particles.append(self.generate_particle())
+        if self.particle is None:
+            self.particle = self.generate_particle()
 
     def update(self, blocks):
         blocks_to_remove = []
-        particles_to_remove = []
 
-        for particle in self.particles:
-            particle.move(self.screen_width, self.screen_height)
+        if self.particle:
+            self.particle.move(self.screen_width, self.screen_height)
 
-            if self.check_collision(particle, self.main_particle):
-                particle.dx *= -1
-                particle.dy *= -1
+            if self.check_collision(self.particle, self.main_particle):
+                self.particle.dx *= -1
+                self.particle.dy *= -1
 
             for block in blocks:
-                if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
+                if block.x <= self.particle.x < block.x + block.width and block.y <= self.particle.y < block.y + block.height:
                     blocks_to_remove.append(block)
-                    particle.dx *= -1
-                    particle.dy *= -1
+                    self.particle.dx *= -1
+                    self.particle.dy *= -1
                     break
 
-            if particle.x < 0 or particle.y < 0 or particle.x > self.screen_width or particle.y > self.screen_height:
-                particles_to_remove.append(particle)
-
-            if particle.lifespan <= 0:
-                particles_to_remove.append(particle)
+            if self.particle.x < 0 or self.particle.y < 0 or self.particle.x >= self.screen_width or self.particle.y >= self.screen_height or self.particle.lifespan <= 0:
+                self.particle = None
 
         for block in blocks_to_remove:
             if block in blocks:
                 blocks.remove(block)
 
-        for particle in particles_to_remove:
-            if particle in self.particles:
-                self.particles.remove(particle)
-
     def check_collision(self, particle1, particle2):
         distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
-        return distance < 12
+        return distance < 1
 
 class Block:
     def __init__(self, x, y, width, height, color):
@@ -181,7 +171,7 @@ class BlockEmitter:
         blocks_to_remove = []
         for block in self.blocks[:]:
             for particle in particles:
-                if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
+                if block.x <= particle.x < block.x + block.width and block.y <= particle.y < block.y + block.height:
                     blocks_to_remove.append(block)
                     particle.dy *= -1
                     particle.dx += random.uniform(-4, 10)
@@ -194,29 +184,29 @@ class BlockEmitter:
             self.last_destroyed_time = time.time()
 
 class MovingBar:
-    def __init__(self, screen_width, screen_height, bar_width=400, bar_height=20):
+    def __init__(self, screen_width, screen_height, bar_width=6, bar_height=1):
         self.screen_width = screen_width
         self.screen_height = screen_height
         self.bar_width = bar_width
         self.bar_height = bar_height
         self.x = screen_width // 2 - bar_width // 2
-        self.y = screen_height - bar_height - 10
-        self.speed = 20
+        self.y = screen_height - bar_height - 1
+        self.speed = 1
         self.hand_controller = HandController()
         self.direction = None
         self.thread = threading.Thread(target=self.update_direction_thread)
         self.thread.daemon = True
         self.thread.start()
         self.movement_log = []
-        self.log_file = open("movement_log.txt", "w")  # Open the file in write mode
+        self.log_file = open("movement_log.txt", "w")
 
     def log_movement(self):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         log_entry = f"{timestamp}, {self.x}, {self.y}\n"
         self.movement_log.append(log_entry)
-        self.log_file.write(log_entry)  # Write the log entry to the file
-        self.log_file.flush()  # Ensure it gets written to disk
-        print(log_entry)  # Debug statement to print to the terminal
+        self.log_file.write(log_entry)
+        self.log_file.flush()
+        print(log_entry)
 
     def update_direction(self, direction):
         self.direction = direction
@@ -236,7 +226,7 @@ class MovingBar:
 
     def clear_log_file(self):
         self.log_file.close()
-        open("movement_log.txt", "w").close()  # Clear the log file
+        open("movement_log.txt", "w").close()
 
 class Game:
     def __init__(self, width, height, grid_size, direction, num_particles, speed):
@@ -249,12 +239,8 @@ class Game:
         self.last_print_time = time.time()
         self.print_interval = 1.0
 
-        self.main_particle = Particle(width // 2, height // 2, speed * 2, direction, (255, 0, 0))
-        self.emitter = ParticleEmitter(self.width, self.height, 20, self.main_particle)
-
-        self.particles = [Particle(self.width // 2, self.height // 2, speed * 2, direction,
-                           (255, 255, 255), 300)
-                  for _ in range(num_particles)]
+        self.main_particle = Particle(width // 2, height // 2, speed * 0.5, direction, (255, 0, 0))
+        self.emitter = ParticleEmitter(self.width, self.height, self.main_particle)
 
         self.output_arrays = []
         self.destroyed_bricks = 0
@@ -262,105 +248,87 @@ class Game:
 
     def run(self):
         running = True
-        block_emitter = BlockEmitter(self.width, self.height, 50, 16)
-        block_emitter.trigger(100, 40, 20)
+        block_emitter = BlockEmitter(self.width, self.height, 1, 20)
+        block_emitter.trigger(40, 1, 1)
         frame_counter = 0
-        N = 32
+        N = 20
 
         np.set_printoptions(threshold=np.inf, linewidth=np.inf)
         plt.ion()
         fig, ax = plt.subplots()
 
-        while running:
-            direction = self.hand_controller.get_direction()
-            self.moving_bar.update_direction(direction)
-            self.moving_bar.update()
+        try:
+            while running:
+                direction = self.hand_controller.get_direction()
+                self.moving_bar.update_direction(direction)
+                self.moving_bar.update()
 
-            self.main_particle.update_acceleration(0, 0.5)
-            self.main_particle.move(self.width, self.height)
+                self.main_particle.update_acceleration(0, 0.5)
+                self.main_particle.move(self.width, self.height)
 
-            for particle in self.particles:
-                particle.update_acceleration(0, 0.5)
-                particle.move(self.width, self.height)
+                if self.moving_bar.x <= self.main_particle.x < self.moving_bar.x + self.moving_bar.bar_width and self.moving_bar.y <= self.main_particle.y < self.moving_bar.y + self.moving_bar.bar_height:
+                    self.main_particle.dy *= -2
+                    self.main_particle.dx += random.uniform(-4, 10)
+                    self.main_particle.y = self.moving_bar.y - 1
 
-                if (self.moving_bar.x < particle.x < self.moving_bar.x + self.moving_bar.bar_width and
-                    self.moving_bar.y < particle.y < self.moving_bar.y + self.moving_bar.bar_height):
-                    particle.dy *= -2
-                    particle.dx += random.uniform(-4, 10)
-                    particle.y = self.moving_bar.y - 20
+                destroyed_bricks_before = len(block_emitter.blocks)
+                block_emitter.update([self.main_particle])
+                destroyed_bricks_after = len(block_emitter.blocks)
 
-            if (self.moving_bar.x < self.main_particle.x < self.moving_bar.x + self.moving_bar.bar_width and
-                self.moving_bar.y < self.main_particle.y < self.moving_bar.y + self.moving_bar.bar_height):
-                self.main_particle.dy *= -2
-                self.main_particle.dx += random.uniform(-4, 10)
-                self.main_particle.y = self.moving_bar.y - 20
+                self.destroyed_bricks += destroyed_bricks_before - destroyed_bricks_after
 
-            destroyed_bricks_before = len(block_emitter.blocks)
-            block_emitter.update(self.particles)
-            block_emitter.update([self.main_particle])
-            destroyed_bricks_after = len(block_emitter.blocks)
+                self.emitter.update(block_emitter.blocks)
 
-            self.destroyed_bricks += destroyed_bricks_before - destroyed_bricks_after
+                if self.destroyed_bricks >= 20 and not self.emitter_triggered:
+                    self.emitter.trigger()
+                    self.destroyed_bricks = 0
+                    self.emitter_triggered = True
 
-            self.emitter.update(block_emitter.blocks)
+                if self.emitter_triggered and self.emitter.particle is None:
+                    self.emitter_triggered = False
 
-            if self.destroyed_bricks >= 20 and not self.emitter_triggered:
-                self.emitter.trigger()
-                self.destroyed_bricks = 0
-                self.emitter_triggered = True
+                if block_emitter.last_destroyed_time and (time.time() - block_emitter.last_destroyed_time >= 10):
+                    block_emitter.trigger(40, 1, 1)
+                    print("Blocks re-emitted after 10 seconds.")
+                    block_emitter.last_destroyed_time = None
 
-            if self.emitter_triggered and len(self.emitter.particles) == 0:
-                self.emitter_triggered = False
+                game_array = np.zeros((self.height, self.width, 3), dtype=np.uint8)
 
-            if block_emitter.last_destroyed_time and (time.time() - block_emitter.last_destroyed_time >= 10):
-                block_emitter.trigger(100, 40, 20)
-                print("Blocks re-emitted after 10 seconds.")
-                block_emitter.last_destroyed_time = None
+                if 0 <= int(self.main_particle.y) < self.height and 0 <= int(self.main_particle.x) < self.width:
+                    game_array[int(self.main_particle.y), int(self.main_particle.x)] = self.main_particle.color
 
-            game_array = np.zeros((self.width, self.height, 3), dtype=np.uint8)
+                if self.emitter.particle:
+                    particle = self.emitter.particle
+                    if 0 <= int(particle.y) < self.height and 0 <= int(particle.x) < self.width:
+                        game_array[int(particle.y), int(particle.x)] = particle.color
 
-            if 0 <= int(self.main_particle.x) < self.width and 0 <= int(self.main_particle.y) < self.height:
-                game_array[int(self.main_particle.x), int(self.main_particle.y)] = self.main_particle.color
+                for block in block_emitter.blocks:
+                    if 0 <= block.y < self.height and 0 <= block.x < self.width:
+                        game_array[block.y, block.x] = block.color
 
-            for particle in self.particles:
-                if 0 <= int(particle.x) < self.width and 0 <= int(particle.y) < self.height:
-                    game_array[int(particle.x), int(particle.y)] = particle.color
+                for i in range(self.moving_bar.x, self.moving_bar.x + self.moving_bar.bar_width):
+                    for j in range(self.moving_bar.y, self.moving_bar.y + self.moving_bar.bar_height):
+                        if 0 <= j < self.height and 0 <= i < self.width:
+                            game_array[j, i] = (255, 255, 255)
 
-            for particle in self.emitter.particles:
-                if 0 <= int(particle.x) < self.width and 0 <= int(particle.y) < self.height:
-                    game_array[int(particle.x), int(particle.y)] = particle.color
+                ax.clear()
+                ax.imshow(game_array)
+                plt.draw()
+                plt.pause(0.001)
 
-            for block in block_emitter.blocks:
-                for i in range(block.x, block.x + block.width):
-                    for j in range(block.y, block.y + block.height):
-                        if 0 <= i < self.width and 0 <= j < self.height:
-                            game_array[i, j] = block.color
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    running = False
 
-            for i in range(self.moving_bar.x, self.moving_bar.x + self.moving_bar.bar_width):
-                for j in range(self.moving_bar.y, self.moving_bar.y + self.moving_bar.bar_height):
-                    if 0 <= i < self.width and 0 <= j < self.height:
-                        game_array[i, j] = (255, 255, 255)
-
-            screen_array = cv2.resize(game_array, (20, 20), interpolation=cv2.INTER_NEAREST)
-            reduced_color_array = (screen_array / 32).astype(np.uint8) * 32
-            rotated_array = np.rot90(reduced_color_array, -1)
-            flipped_array = np.fliplr(rotated_array)
-
-            self.output_arrays.append(flipped_array)
-            if time.time() - self.last_print_time >= self.print_interval:
-                print(reduced_color_array)
-                self.last_print_time = time.time()
-
-            ax.clear()
-            ax.imshow(flipped_array)
-            plt.draw()
-            plt.pause(0.001)
-
-            frame_counter += 1
-
-        self.moving_bar.clear_log_file()
-        self.hand_controller.release()
+                frame_counter += 1
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.moving_bar.clear_log_file()
+            self.hand_controller.release()
+            plt.ioff()
+            plt.close(fig)
+            cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 1, 1, 10)
+    game = Game(20, 20, 1, 1, 1, 2)
     game.run()
