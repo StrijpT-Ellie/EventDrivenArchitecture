@@ -326,7 +326,7 @@ class Game:
             self.moving_bar.clear_log_file()
             self.hand_controller.release()
             plt.ioff()
-            plt.close(fig)
+            plt.close()
             cv2.destroyAllWindows()
 
 if __name__ == "__main__":
