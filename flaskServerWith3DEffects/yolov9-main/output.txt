@@ -1,0 +1,452 @@
+[34m[1mdetect: [0mweights=['gelan-c.pt'], source=0, data=data/coco128.yaml, imgsz=[640, 640], conf_thres=0.5, iou_thres=0.45, max_det=1000, device=cpu, view_img=False, save_txt=False, save_conf=False, save_crop=False, nosave=False, classes=None, agnostic_nms=False, augment=False, visualize=False, update=False, project=runs/detect, name=exp, exist_ok=False, line_thickness=3, hide_labels=False, hide_conf=False, half=False, dnn=False, vid_stride=1
+YOLOv5 🚀 2024-5-26 Python-3.11.9 torch-2.0.0 CPU
+
+Fusing layers... 
+Model summary: 387 layers, 25288768 parameters, 0 gradients, 102.1 GFLOPs
+1/1: 0...  Success (inf frames 1920x1080 at 15.00 FPS)
+
+0: 384x640 (no detections), 182.2ms
+0: 384x640 1 person, 172.6ms
+0: 384x640 1 person, 183.2ms
+0: 384x640 1 person, 162.8ms
+0: 384x640 1 person, 163.5ms
+0: 384x640 1 person, 169.1ms
+0: 384x640 1 person, 175.4ms
+0: 384x640 1 person, 166.8ms
+0: 384x640 1 person, 164.0ms
+0: 384x640 1 person, 171.2ms
+0: 384x640 1 person, 169.3ms
+0: 384x640 1 person, 167.7ms
+0: 384x640 1 person, 169.4ms
+0: 384x640 1 person, 175.8ms
+0: 384x640 1 person, 175.9ms
+0: 384x640 1 person, 186.7ms
+0: 384x640 1 person, 192.6ms
+0: 384x640 1 person, 180.6ms
+0: 384x640 1 person, 188.5ms
+0: 384x640 1 person, 179.8ms
+0: 384x640 1 person, 316.0ms
+0: 384x640 1 person, 237.1ms
+0: 384x640 1 person, 189.8ms
+0: 384x640 1 person, 234.4ms
+0: 384x640 1 person, 203.9ms
+0: 384x640 1 person, 232.4ms
+0: 384x640 1 person, 197.1ms
+0: 384x640 1 person, 183.2ms
+0: 384x640 1 person, 208.2ms
+0: 384x640 1 person, 315.9ms
+0: 384x640 1 person, 332.7ms
+0: 384x640 1 person, 194.0ms
+0: 384x640 1 person, 189.8ms
+0: 384x640 1 person, 191.3ms
+0: 384x640 1 person, 186.1ms
+0: 384x640 1 person, 200.4ms
+0: 384x640 1 person, 186.3ms
+0: 384x640 1 person, 181.1ms
+0: 384x640 1 person, 183.1ms
+0: 384x640 1 person, 173.3ms
+0: 384x640 1 person, 176.6ms
+0: 384x640 1 person, 179.5ms
+0: 384x640 1 person, 176.0ms
+0: 384x640 1 person, 179.3ms
+0: 384x640 1 person, 186.7ms
+0: 384x640 1 person, 181.8ms
+0: 384x640 1 person, 175.5ms
+0: 384x640 1 person, 180.4ms
+0: 384x640 1 person, 177.0ms
+0: 384x640 1 person, 175.1ms
+0: 384x640 1 person, 180.2ms
+0: 384x640 1 person, 182.6ms
+0: 384x640 1 person, 184.4ms
+0: 384x640 1 person, 181.3ms
+0: 384x640 1 person, 176.5ms
+0: 384x640 1 person, 208.4ms
+0: 384x640 1 person, 178.6ms
+0: 384x640 1 person, 178.8ms
+0: 384x640 1 person, 181.3ms
+0: 384x640 1 person, 209.3ms
+0: 384x640 1 person, 193.4ms
+0: 384x640 1 person, 213.1ms
+0: 384x640 1 person, 182.4ms
+0: 384x640 1 person, 201.7ms
+0: 384x640 1 person, 190.2ms
+0: 384x640 1 person, 183.0ms
+0: 384x640 1 person, 182.1ms
+0: 384x640 1 person, 175.7ms
+0: 384x640 1 person, 181.5ms
+0: 384x640 1 person, 183.1ms
+0: 384x640 1 person, 178.6ms
+0: 384x640 1 person, 177.7ms
+0: 384x640 1 person, 179.3ms
+0: 384x640 1 person, 177.8ms
+0: 384x640 1 person, 182.4ms
+0: 384x640 1 person, 182.2ms
+0: 384x640 1 person, 173.4ms
+0: 384x640 1 person, 196.1ms
+0: 384x640 1 person, 174.0ms
+0: 384x640 1 person, 233.5ms
+0: 384x640 1 person, 236.8ms
+0: 384x640 1 person, 183.1ms
+0: 384x640 1 person, 177.7ms
+0: 384x640 1 person, 184.4ms
+0: 384x640 1 person, 183.1ms
+0: 384x640 1 person, 188.6ms
+0: 384x640 1 person, 185.0ms
+0: 384x640 1 person, 172.9ms
+0: 384x640 1 person, 189.1ms
+0: 384x640 1 person, 185.6ms
+0: 384x640 1 person, 181.5ms
+0: 384x640 1 person, 169.7ms
+0: 384x640 1 person, 178.8ms
+0: 384x640 1 person, 179.3ms
+0: 384x640 1 person, 177.1ms
+0: 384x640 1 person, 184.3ms
+0: 384x640 1 person, 167.5ms
+0: 384x640 1 person, 179.8ms
+0: 384x640 1 person, 190.0ms
+0: 384x640 1 person, 186.0ms
+0: 384x640 1 person, 176.6ms
+0: 384x640 1 person, 171.3ms
+0: 384x640 1 person, 165.9ms
+0: 384x640 1 person, 164.6ms
+0: 384x640 1 person, 173.7ms
+0: 384x640 1 person, 169.7ms
+0: 384x640 1 person, 165.5ms
+0: 384x640 1 person, 166.7ms
+0: 384x640 1 person, 169.9ms
+0: 384x640 1 person, 170.1ms
+0: 384x640 1 person, 1 cell phone, 167.7ms
+0: 384x640 1 person, 1 cell phone, 173.0ms
+0: 384x640 1 person, 1 cell phone, 169.0ms
+0: 384x640 1 person, 1 cell phone, 170.1ms
+0: 384x640 1 person, 1 cell phone, 168.6ms
+0: 384x640 1 person, 1 cell phone, 166.6ms
+0: 384x640 1 person, 1 cell phone, 161.1ms
+0: 384x640 1 person, 1 cell phone, 157.1ms
+0: 384x640 1 person, 1 cell phone, 166.7ms
+0: 384x640 1 person, 1 cell phone, 165.9ms
+0: 384x640 1 person, 1 cell phone, 164.7ms
+0: 384x640 1 person, 1 cell phone, 164.0ms
+0: 384x640 1 person, 1 cell phone, 172.7ms
+0: 384x640 1 person, 1 cell phone, 168.8ms
+0: 384x640 1 person, 1 cell phone, 159.1ms
+0: 384x640 1 person, 1 cell phone, 162.5ms
+0: 384x640 1 person, 1 cell phone, 166.9ms
+0: 384x640 1 person, 1 cell phone, 161.7ms
+0: 384x640 1 person, 1 cell phone, 159.2ms
+0: 384x640 1 person, 1 cell phone, 161.8ms
+0: 384x640 1 person, 1 cell phone, 170.0ms
+0: 384x640 1 person, 1 cell phone, 162.9ms
+0: 384x640 1 person, 1 cell phone, 172.6ms
+0: 384x640 1 person, 1 cell phone, 171.1ms
+0: 384x640 1 person, 1 cell phone, 165.0ms
+0: 384x640 1 person, 1 cell phone, 163.1ms
+0: 384x640 1 person, 1 cell phone, 171.8ms
+0: 384x640 1 person, 1 cell phone, 197.3ms
+0: 384x640 1 person, 1 cell phone, 167.2ms
+0: 384x640 1 person, 1 cell phone, 166.9ms
+0: 384x640 1 person, 1 cell phone, 159.0ms
+0: 384x640 1 person, 1 cell phone, 161.8ms
+0: 384x640 1 person, 1 cell phone, 163.4ms
+0: 384x640 1 person, 1 cell phone, 167.1ms
+0: 384x640 1 person, 1 cell phone, 171.6ms
+0: 384x640 1 person, 1 cell phone, 169.3ms
+0: 384x640 1 person, 1 cell phone, 166.5ms
+0: 384x640 1 person, 1 cell phone, 162.9ms
+0: 384x640 1 person, 1 cell phone, 164.3ms
+0: 384x640 1 person, 1 cell phone, 163.0ms
+0: 384x640 1 person, 1 cell phone, 173.6ms
+0: 384x640 1 person, 1 cell phone, 162.4ms
+0: 384x640 1 person, 1 cell phone, 161.9ms
+0: 384x640 1 person, 1 cell phone, 164.7ms
+0: 384x640 1 person, 1 cell phone, 160.9ms
+0: 384x640 1 person, 1 cell phone, 163.1ms
+0: 384x640 1 person, 1 cell phone, 165.5ms
+0: 384x640 1 person, 1 cell phone, 161.4ms
+0: 384x640 1 person, 1 cell phone, 163.3ms
+0: 384x640 1 person, 1 cell phone, 167.1ms
+0: 384x640 1 person, 1 cell phone, 165.5ms
+0: 384x640 1 person, 1 cell phone, 179.4ms
+0: 384x640 1 person, 1 cell phone, 160.4ms
+0: 384x640 1 person, 1 cell phone, 162.4ms
+0: 384x640 1 person, 1 cell phone, 177.3ms
+0: 384x640 1 person, 1 cell phone, 166.8ms
+0: 384x640 1 person, 1 cell phone, 183.6ms
+0: 384x640 1 person, 1 cell phone, 180.8ms
+0: 384x640 1 person, 1 cell phone, 165.4ms
+0: 384x640 1 person, 1 cell phone, 163.9ms
+0: 384x640 1 person, 1 cell phone, 167.0ms
+0: 384x640 1 person, 1 cell phone, 166.9ms
+0: 384x640 1 person, 1 cell phone, 157.5ms
+0: 384x640 1 person, 1 cell phone, 185.2ms
+0: 384x640 1 person, 1 cell phone, 172.6ms
+0: 384x640 1 person, 1 cell phone, 171.5ms
+0: 384x640 1 person, 1 remote, 181.3ms
+0: 384x640 1 person, 162.9ms
+0: 384x640 1 person, 167.6ms
+0: 384x640 1 person, 181.5ms
+0: 384x640 1 person, 167.5ms
+0: 384x640 1 person, 171.4ms
+0: 384x640 1 person, 164.0ms
+0: 384x640 1 person, 171.4ms
+0: 384x640 1 person, 166.1ms
+0: 384x640 1 person, 169.6ms
+0: 384x640 1 person, 163.6ms
+0: 384x640 1 person, 169.8ms
+0: 384x640 1 person, 162.2ms
+0: 384x640 1 person, 166.9ms
+0: 384x640 1 person, 168.5ms
+0: 384x640 1 person, 174.0ms
+0: 384x640 1 person, 167.7ms
+0: 384x640 1 person, 181.7ms
+0: 384x640 1 person, 174.2ms
+0: 384x640 1 person, 171.6ms
+0: 384x640 1 person, 172.7ms
+0: 384x640 1 person, 163.4ms
+0: 384x640 1 person, 163.1ms
+0: 384x640 1 person, 158.9ms
+0: 384x640 1 person, 162.1ms
+0: 384x640 1 person, 163.9ms
+0: 384x640 1 person, 161.7ms
+0: 384x640 1 person, 156.7ms
+0: 384x640 1 person, 160.4ms
+0: 384x640 1 person, 159.1ms
+0: 384x640 1 person, 163.9ms
+0: 384x640 1 person, 167.4ms
+0: 384x640 1 person, 165.8ms
+0: 384x640 1 person, 163.6ms
+0: 384x640 1 person, 162.3ms
+0: 384x640 1 person, 157.8ms
+0: 384x640 1 person, 159.2ms
+0: 384x640 1 person, 166.6ms
+0: 384x640 1 person, 163.6ms
+0: 384x640 1 person, 163.3ms
+0: 384x640 1 person, 1 cell phone, 158.2ms
+0: 384x640 1 person, 1 cell phone, 160.3ms
+0: 384x640 1 person, 1 cell phone, 163.9ms
+0: 384x640 1 person, 1 cell phone, 164.1ms
+0: 384x640 1 person, 1 cell phone, 165.2ms
+0: 384x640 1 person, 1 cell phone, 163.6ms
+0: 384x640 1 person, 1 cell phone, 167.7ms
+0: 384x640 1 person, 1 cell phone, 161.0ms
+0: 384x640 1 person, 1 cell phone, 160.8ms
+0: 384x640 1 person, 1 cell phone, 161.4ms
+0: 384x640 1 person, 1 cell phone, 160.0ms
+0: 384x640 1 person, 1 cell phone, 160.5ms
+0: 384x640 1 person, 1 cell phone, 158.3ms
+0: 384x640 1 person, 1 cell phone, 164.5ms
+0: 384x640 1 person, 1 cell phone, 163.2ms
+0: 384x640 1 person, 162.0ms
+0: 384x640 1 person, 166.1ms
+0: 384x640 1 person, 160.4ms
+0: 384x640 1 person, 173.1ms
+0: 384x640 1 person, 158.5ms
+0: 384x640 1 person, 169.8ms
+0: 384x640 1 person, 160.8ms
+0: 384x640 1 person, 159.7ms
+0: 384x640 1 person, 177.5ms
+0: 384x640 1 person, 161.7ms
+0: 384x640 1 person, 161.1ms
+0: 384x640 1 person, 1 cell phone, 164.0ms
+0: 384x640 1 person, 1 cell phone, 156.7ms
+0: 384x640 1 person, 1 cell phone, 161.5ms
+0: 384x640 1 person, 1 cell phone, 162.1ms
+0: 384x640 1 person, 1 cell phone, 161.9ms
+0: 384x640 1 person, 1 cell phone, 160.3ms
+0: 384x640 1 person, 1 cell phone, 156.7ms
+0: 384x640 1 person, 1 cell phone, 159.5ms
+0: 384x640 1 person, 1 cell phone, 159.2ms
+0: 384x640 1 person, 1 cell phone, 155.9ms
+0: 384x640 1 person, 1 cell phone, 162.6ms
+0: 384x640 1 person, 1 cell phone, 162.9ms
+0: 384x640 1 person, 1 cell phone, 160.5ms
+0: 384x640 1 person, 1 cell phone, 158.2ms
+0: 384x640 1 person, 1 cell phone, 166.9ms
+0: 384x640 1 person, 1 cell phone, 155.9ms
+0: 384x640 1 person, 1 cell phone, 157.7ms
+0: 384x640 1 person, 1 cell phone, 167.3ms
+0: 384x640 1 person, 1 cell phone, 166.8ms
+0: 384x640 1 person, 1 cell phone, 162.0ms
+0: 384x640 1 person, 1 cell phone, 169.4ms
+0: 384x640 1 person, 1 cell phone, 163.4ms
+0: 384x640 1 person, 1 cell phone, 160.7ms
+0: 384x640 1 person, 1 cell phone, 159.5ms
+0: 384x640 1 person, 1 cell phone, 162.7ms
+0: 384x640 1 person, 1 cell phone, 160.6ms
+0: 384x640 1 person, 1 cell phone, 163.5ms
+0: 384x640 1 person, 1 cell phone, 166.4ms
+0: 384x640 1 person, 1 cell phone, 169.2ms
+0: 384x640 1 person, 1 cell phone, 170.8ms
+0: 384x640 1 person, 1 cell phone, 169.3ms
+0: 384x640 1 person, 1 cell phone, 157.8ms
+0: 384x640 1 person, 1 cell phone, 159.5ms
+0: 384x640 1 person, 1 cell phone, 159.0ms
+0: 384x640 1 person, 1 cell phone, 161.9ms
+0: 384x640 1 person, 1 cell phone, 158.8ms
+0: 384x640 1 person, 1 cell phone, 165.4ms
+0: 384x640 1 person, 1 cell phone, 163.5ms
+0: 384x640 1 person, 1 cell phone, 166.4ms
+0: 384x640 1 person, 1 cell phone, 160.3ms
+0: 384x640 1 person, 1 cell phone, 159.6ms
+0: 384x640 1 person, 162.4ms
+0: 384x640 1 person, 175.3ms
+0: 384x640 1 person, 169.1ms
+0: 384x640 1 person, 164.0ms
+0: 384x640 1 person, 163.2ms
+0: 384x640 1 person, 165.4ms
+0: 384x640 1 person, 165.6ms
+0: 384x640 1 person, 158.3ms
+0: 384x640 1 person, 165.6ms
+0: 384x640 1 person, 175.5ms
+0: 384x640 1 person, 171.4ms
+0: 384x640 1 person, 165.9ms
+0: 384x640 1 person, 179.3ms
+0: 384x640 1 person, 160.3ms
+0: 384x640 1 person, 161.4ms
+0: 384x640 1 person, 171.7ms
+0: 384x640 1 person, 160.1ms
+0: 384x640 1 person, 168.8ms
+0: 384x640 1 person, 166.3ms
+0: 384x640 1 person, 161.8ms
+0: 384x640 1 person, 158.7ms
+0: 384x640 1 person, 158.2ms
+0: 384x640 1 person, 166.4ms
+0: 384x640 1 person, 161.4ms
+0: 384x640 1 person, 168.5ms
+0: 384x640 1 person, 162.9ms
+0: 384x640 1 person, 166.6ms
+0: 384x640 1 person, 157.9ms
+0: 384x640 1 person, 158.7ms
+0: 384x640 1 person, 157.8ms
+0: 384x640 1 person, 166.2ms
+0: 384x640 1 person, 163.9ms
+0: 384x640 1 person, 161.8ms
+0: 384x640 1 person, 161.4ms
+0: 384x640 1 person, 165.4ms
+0: 384x640 1 person, 169.9ms
+0: 384x640 1 person, 157.6ms
+0: 384x640 1 person, 165.7ms
+0: 384x640 1 person, 159.5ms
+0: 384x640 1 person, 164.4ms
+0: 384x640 1 person, 160.4ms
+0: 384x640 1 person, 168.1ms
+0: 384x640 1 person, 165.2ms
+0: 384x640 1 person, 173.5ms
+0: 384x640 1 person, 169.6ms
+0: 384x640 1 person, 1 cup, 169.0ms
+0: 384x640 1 person, 1 cup, 165.9ms
+0: 384x640 1 person, 1 cup, 162.8ms
+0: 384x640 1 person, 1 cup, 162.4ms
+0: 384x640 1 person, 1 cup, 167.2ms
+0: 384x640 1 person, 163.6ms
+0: 384x640 1 person, 170.1ms
+0: 384x640 1 person, 164.4ms
+0: 384x640 1 person, 1 remote, 168.7ms
+0: 384x640 1 person, 168.2ms
+0: 384x640 1 person, 1 remote, 163.5ms
+0: 384x640 1 person, 1 cup, 168.7ms
+0: 384x640 1 person, 1 cup, 175.1ms
+0: 384x640 1 person, 168.3ms
+0: 384x640 1 person, 164.4ms
+0: 384x640 1 person, 168.8ms
+0: 384x640 1 person, 169.9ms
+0: 384x640 1 person, 174.1ms
+0: 384x640 1 person, 166.5ms
+0: 384x640 1 person, 166.2ms
+0: 384x640 1 person, 166.9ms
+0: 384x640 1 person, 163.9ms
+0: 384x640 1 person, 165.5ms
+0: 384x640 1 person, 172.0ms
+0: 384x640 1 person, 172.8ms
+0: 384x640 1 person, 168.9ms
+0: 384x640 1 person, 168.2ms
+0: 384x640 1 person, 166.5ms
+0: 384x640 1 person, 173.6ms
+0: 384x640 1 person, 164.2ms
+0: 384x640 1 person, 161.0ms
+0: 384x640 1 person, 165.2ms
+0: 384x640 1 person, 177.0ms
+0: 384x640 1 person, 164.2ms
+0: 384x640 1 person, 168.4ms
+0: 384x640 1 person, 174.8ms
+0: 384x640 1 person, 169.8ms
+0: 384x640 1 person, 173.6ms
+0: 384x640 1 person, 171.1ms
+0: 384x640 1 person, 169.3ms
+0: 384x640 1 person, 177.2ms
+0: 384x640 1 person, 169.9ms
+0: 384x640 1 person, 168.2ms
+0: 384x640 1 person, 165.1ms
+0: 384x640 1 person, 174.7ms
+0: 384x640 1 person, 173.9ms
+0: 384x640 1 person, 171.1ms
+0: 384x640 1 person, 173.2ms
+0: 384x640 1 person, 171.6ms
+0: 384x640 1 person, 175.0ms
+0: 384x640 1 person, 170.2ms
+0: 384x640 1 person, 179.4ms
+0: 384x640 1 person, 170.2ms
+0: 384x640 1 person, 169.5ms
+0: 384x640 1 person, 182.9ms
+0: 384x640 1 person, 167.9ms
+0: 384x640 1 person, 177.1ms
+0: 384x640 1 person, 172.4ms
+0: 384x640 1 person, 172.2ms
+0: 384x640 1 person, 163.2ms
+0: 384x640 1 person, 186.4ms
+0: 384x640 1 person, 173.3ms
+0: 384x640 1 person, 176.2ms
+0: 384x640 1 person, 174.4ms
+0: 384x640 1 person, 170.5ms
+0: 384x640 1 person, 183.2ms
+0: 384x640 1 person, 171.6ms
+0: 384x640 1 person, 172.7ms
+0: 384x640 1 person, 165.8ms
+Traceback (most recent call last):
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/detect.py", line 231, in <module>
+    main(opt)
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/detect.py", line 226, in main
+    run(**vars(opt))
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/detect.py", line 98, in run
+    pred = model(im, augment=augment, visualize=visualize)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 854, in forward
+    y = self.model(im, augment=augment, visualize=visualize) if augment or visualize else self.model(im)
+                                                                                          ^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/yolo.py", line 582, in forward
+    return self._forward_once(x, profile, visualize)  # single-scale inference, train
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/yolo.py", line 481, in _forward_once
+    x = m(x)  # run
+        ^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 591, in forward
+    y = list(self.cv1(x).chunk(2, 1))
+             ^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 57, in forward_fuse
+    return self.act(self.conv(x))
+                    ^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/conv.py", line 463, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/conv.py", line 459, in _conv_forward
+    return F.conv2d(input, weight, bias, self.stride,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
