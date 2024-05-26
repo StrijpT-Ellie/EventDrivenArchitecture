@@ -1,3 +1,5 @@
+#More contrast for 8 bit output
+
 import cv2
 import numpy as np
 

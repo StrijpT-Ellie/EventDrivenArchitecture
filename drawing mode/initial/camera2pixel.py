@@ -1,3 +1,5 @@
+#This code converts the camera feed to a 20 by 20 grid of "pixels"
+
 import cv2
 import numpy as np
 

@@ -21,7 +21,7 @@ And there is a function to make the sphere appear when event is recognised, but 
 
 ---
 
-Current prototype is in flask2DServer 
+flask2DServer is depreciated 
 
 This prototype generates a particle game with pyGame. 
 
@@ -46,6 +46,3 @@ Particles will float around, hit walls/edges of the screen and eventually group 
 Particle behaviour must be updtaed and connected to handController allowing users to influence the particle swarm. 
 
 ---
-
-This prototype must acquire more components with genAI text2picture or picture2picture models. As well as LLM for conversational mode. 
-Modes must be switching when certain events are recognised. 
