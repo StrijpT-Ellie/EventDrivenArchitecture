@@ -1,3 +1,9 @@
+#This is a script for mode selection 
+#It displays the modes available to the user
+#The user can select a mode by showing fingers to the camera
+#Modes are displayed as pixelated text
+#When a number of fingers is shown for 6 seconds the corresponding mode is highlighted in green
+
 import cv2 as cv
 import numpy as np
 import os
