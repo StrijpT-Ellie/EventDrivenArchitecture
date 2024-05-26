@@ -1,3 +1,7 @@
+#Video to 20 by 20 pixel grid
+#Imitates waterfall effect with circles
+#Adds a delay to motion
+
 import cv2
 import numpy as np
 

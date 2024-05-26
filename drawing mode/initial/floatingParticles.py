@@ -1,3 +1,7 @@
+#Floating particles in the array of pixels
+#This code converts the camera feed to a 20 by 20 grid of "pixels" and adds floating particles to the display
+#The particles move around the display and change direction when motion is detected
+
 import cv2
 import numpy as np
 import random

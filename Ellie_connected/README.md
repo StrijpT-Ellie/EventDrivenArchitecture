@@ -1,40 +1,31 @@
-# Efficient-Real-Time-Object-Detection-in-Videos-using-MobileNetSSD
-
 ## Overview
 
-This project implements a real-time object detection system in videos using the MobileNetSSD (MobileNet Single Shot Multibox Detector) model. The goal is to efficiently identify and locate objects in streaming video, making it suitable for applications such as video surveillance, smart cameras, and real-time analytics.
+This project implements a real-time object detection system in a video stream from default camera using the MobileNetSSD (MobileNet Single Shot Multibox Detector) model. Another file is listening to person detector output in .txt and launches a game when a person is detected.
 
-## Features
+-----
 
-- **MobileNetSSD Model:** Utilizes the MobileNet architecture for efficient object detection without compromising accuracy, making it suitable for real-time applications.
-- **Real-Time Processing:** Achieves low-latency object detection, allowing for seamless integration into applications requiring live video analysis.
-- **Video Input Support:** Supports various video formats as input, enabling flexibility for different sources such as webcam feeds, recorded videos, or live streams.
-- **Bounding Box Visualization:** Highlights detected objects in the video frames with bounding boxes, providing a clear visual representation of the detection results.
-- **Configurability:** Allows users to fine-tune detection parameters, such as confidence thresholds, to adapt the system to specific requirements.
+**real_time_object_detection.py** - test file for object detection with default webcam and MobileNet
 
-## Getting Started
+Launch with:
+python real_time_object_detection.py --prototxt MobileNetSSD_deploy.prototxt.txt --model MobileNetSSD_deploy.caffemodel
 
-### Prerequisites
+**real_time_object_detection_autoquit.py** - this file automatically closes when a person is detected
+Recognised objects output saved to labels.txt
 
-- Python 3.x
-- OpenCV
+Launch with:
+py -3.11 real_time_object_detection_autoquit.py --prototxt .\model\MobileNetSSD_deploy.prototxt.txt --model .\model\MobileNetSSD_deploy.caffemodel
 
-### Installation
 
-Clone the repository:
- ```bash
- git clone https://github.com/your-username/real-time-object-detection.git
- cd real-time-object-detection
-```
+**contourWallAI_blocksNRows_eventDriven.py** - listens to .txt file and launches brick pong game with mediapipe-based hand controller
 
-Usage (for real-time video):
+-----
 
-```bash
-python real_time_object_detection.py --prototxt .\model\MobileNetSSD_deploy.prototxt.txt --model .\model\MobileNetSSD_deploy.caffemodel
-```
+To run:
 
-Usage (for sample images):
+1. Close your camera with a paper or a hand 
+2. Launch real_time_object_detection_autoquit.py 
+3. Launch contourWallAI_blocksNRows_eventDriven.py
+4. Open the camera 
+5. real_time_object_detection_autoquit.py will detect a person and quit 
+6. contourWallAI_blocksNRows_eventDriven.py will detect a person in .txt and launch a brick pong game
 
-```bash
-python deep_learning_object_detection.py --image .\images\example_03.jpg --prototxt .\model\MobileNetSSD_deploy.prototxt.txt --model .\model\MobileNetSSD_deploy.caffemodel
-```

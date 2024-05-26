@@ -1,0 +1,94 @@
+[34m[1mdetect: [0mweights=['gelan-c.pt'], source=0, data=data/coco128.yaml, imgsz=[640, 640], conf_thres=0.5, iou_thres=0.45, max_det=1000, device=cpu, view_img=False, save_txt=False, save_conf=False, save_crop=False, nosave=False, classes=None, agnostic_nms=False, augment=False, visualize=False, update=False, project=runs/detect, name=exp, exist_ok=False, line_thickness=3, hide_labels=False, hide_conf=False, half=False, dnn=False, vid_stride=1
+YOLOv5 🚀 2024-5-26 Python-3.11.9 torch-2.0.0 CPU
+
+Fusing layers... 
+Model summary: 387 layers, 25288768 parameters, 0 gradients, 102.1 GFLOPs
+1/1: 0...  Success (inf frames 1920x1080 at 15.00 FPS)
+
+0: 384x640 (no detections), 165.5ms
+0: 384x640 1 person, 167.1ms
+0: 384x640 1 person, 159.0ms
+0: 384x640 1 person, 153.0ms
+0: 384x640 1 person, 132.7ms
+0: 384x640 1 person, 143.1ms
+0: 384x640 1 person, 133.0ms
+0: 384x640 1 person, 141.3ms
+0: 384x640 1 person, 145.4ms
+0: 384x640 1 person, 147.8ms
+0: 384x640 1 person, 147.8ms
+0: 384x640 1 person, 151.9ms
+0: 384x640 1 person, 152.9ms
+Traceback (most recent call last):
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/detect.py", line 231, in <module>
+    main(opt)
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/detect.py", line 226, in main
+    run(**vars(opt))
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 115, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/detect.py", line 98, in run
+    pred = model(im, augment=augment, visualize=visualize)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 854, in forward
+    y = self.model(im, augment=augment, visualize=visualize) if augment or visualize else self.model(im)
+                                                                                          ^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/yolo.py", line 582, in forward
+    return self._forward_once(x, profile, visualize)  # single-scale inference, train
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/yolo.py", line 481, in _forward_once
+    x = m(x)  # run
+        ^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 592, in forward
+    y.extend((m(y[-1])) for m in [self.cv2, self.cv3])
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 592, in <genexpr>
+    y.extend((m(y[-1])) for m in [self.cv2, self.cv3])
+              ^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/container.py", line 217, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 384, in forward
+    return self.cv3(torch.cat((self.m(self.cv1(x)), self.cv2(x)), 1))
+                               ^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/container.py", line 217, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 309, in forward
+    return x + self.cv2(self.cv1(x)) if self.add else self.cv2(self.cv1(x))
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/krasnomakov/Documents1/py/ellie/EventDrivenArchitecture/flaskServerWith3DEffects/yolov9-main/models/common.py", line 57, in forward_fuse
+    return self.act(self.conv(x))
+                    ^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1501, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/conv.py", line 463, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/lib/python3.11/site-packages/torch/nn/modules/conv.py", line 459, in _conv_forward
+    return F.conv2d(input, weight, bias, self.stride,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

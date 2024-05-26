@@ -1,3 +1,10 @@
+#This script converts the camera feed to a 20 by 20 grid of black and white pixels.
+#It only returns black and white pixels, with no shades of gray.
+#The video is indistinguishable
+#It mainly reacts on light and dark areas in the input
+#Close your camera with a hand to see the dark screen 
+#Open the camera to see white moving pixels
+
 import numpy as np
 import matplotlib.pyplot as plt
 import cv2
