@@ -1,10 +1,13 @@
-//This is an inverted version of waterfallMoveOptimised.c
-//Black is now white and white is now black
+//This version transfers enhance contrast funciton computation to CUDA 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudacodec.hpp>
+#include <opencv2/cudafilters.hpp>
+#include <opencv2/cudaimgproc.hpp>
 
 #define PIXELATED_WIDTH 20
 #define PIXELATED_HEIGHT 20
@@ -14,6 +17,10 @@
 using namespace cv;
 using namespace std;
 
+// Function declarations
+void quantize_colors(Mat &image);
+void enhance_contrast(Mat &image);
+
 void quantize_colors(Mat &image) {
     image.forEach<Vec3b>([](Vec3b &pixel, const int * position) -> void {
         pixel[0] = pixel[0] > 127 ? 255 : 0;
@@ -22,15 +29,23 @@ void quantize_colors(Mat &image) {
     });
 }
 
-void enhance_contrast(Mat &image) {
-    Mat lab_image;
-    cvtColor(image, lab_image, COLOR_BGR2Lab);
-    vector<Mat> lab_planes(3);
-    split(lab_image, lab_planes);
-    Ptr<CLAHE> clahe = createCLAHE(3.0, Size(8, 8));
+void enhance_contrast(cv::Mat &image) {
+    cv::cuda::GpuMat gpu_image;
+    gpu_image.upload(image);
+
+    cv::cuda::GpuMat lab_image;
+    cv::cuda::cvtColor(gpu_image, lab_image, cv::COLOR_BGR2Lab);
+
+    std::vector<cv::cuda::GpuMat> lab_planes(3);
+    cv::cuda::split(lab_image, lab_planes);
+
+    cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(3.0, cv::Size(8, 8));
     clahe->apply(lab_planes[0], lab_planes[0]);
-    merge(lab_planes, lab_image);
-    cvtColor(lab_image, image, COLOR_Lab2BGR);
+
+    cv::cuda::merge(lab_planes, lab_image);
+    cv::cuda::cvtColor(lab_image, gpu_image, cv::COLOR_Lab2BGR);
+
+    gpu_image.download(image);
 }
 
 int main(int argc, char** argv) {
@@ -111,16 +126,11 @@ int main(int argc, char** argv) {
             circle(canvas, Point(pos.x * spacing_x + spacing_x / 2, pos.y * spacing_y + spacing_y / 2), radius, Scalar(color[0], color[1], color[2]), -1);
         }
 
-        // Convert canvas to the same type as long_exposure_frame
         Mat canvas_float;
         canvas.convertTo(canvas_float, CV_32FC3);
-
-        // Convert canvas_float to 8-bit and invert the colors
         Mat canvas_inverted;
         canvas_float.convertTo(canvas_inverted, CV_8UC3);
         bitwise_not(canvas_inverted, canvas_inverted);
-
-        // Convert the inverted canvas back to float
         canvas_inverted.convertTo(canvas_float, CV_32FC3);
 
         addWeighted(long_exposure_frame, 0.95, canvas_float, 0.05, 0, long_exposure_frame);
@@ -140,4 +150,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-

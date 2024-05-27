@@ -1,10 +1,20 @@
-//This is an inverted version of waterfallMoveOptimised.c
-//Black is now white and white is now black
+//This version transfers enhance contrast funciton computation to CUDA 
+//And also quantize colors is on GPU 
+//GaussianBlur is also on GPU 
+//absdiff and threshold are on GPU 
+//cvtColor also on CUDA 
+
+//using CUDA streams and Persistent GPU Memory 
+//
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <opencv2/opencv.hpp>
+#include <opencv2/cudaarithm.hpp>
+#include <opencv2/cudacodec.hpp>
+#include <opencv2/cudafilters.hpp>
+#include <opencv2/cudaimgproc.hpp>
 
 #define PIXELATED_WIDTH 20
 #define PIXELATED_HEIGHT 20
@@ -14,23 +24,34 @@
 using namespace cv;
 using namespace std;
 
-void quantize_colors(Mat &image) {
-    image.forEach<Vec3b>([](Vec3b &pixel, const int * position) -> void {
-        pixel[0] = pixel[0] > 127 ? 255 : 0;
-        pixel[1] = pixel[1] > 127 ? 255 : 0;
-        pixel[2] = pixel[2] > 127 ? 255 : 0;
-    });
+// Function declarations
+void quantize_colors(cv::cuda::GpuMat &gpu_image);
+void enhance_contrast(cv::cuda::GpuMat &gpu_image);
+void cudaGaussianBlur(const cv::cuda::GpuMat& src, cv::cuda::GpuMat& dst, cv::Size ksize, double sigmaX, double sigmaY = 0);
+
+void quantize_colors(cv::cuda::GpuMat &gpu_image) {
+    cv::cuda::GpuMat gpu_quantized;
+    cv::cuda::threshold(gpu_image, gpu_quantized, 127, 255, cv::THRESH_BINARY);
+    gpu_image = gpu_quantized;
 }
 
-void enhance_contrast(Mat &image) {
-    Mat lab_image;
-    cvtColor(image, lab_image, COLOR_BGR2Lab);
-    vector<Mat> lab_planes(3);
-    split(lab_image, lab_planes);
-    Ptr<CLAHE> clahe = createCLAHE(3.0, Size(8, 8));
+void enhance_contrast(cv::cuda::GpuMat &gpu_image) {
+    cv::cuda::GpuMat lab_image;
+    cv::cuda::cvtColor(gpu_image, lab_image, cv::COLOR_BGR2Lab);
+
+    std::vector<cv::cuda::GpuMat> lab_planes(3);
+    cv::cuda::split(lab_image, lab_planes);
+
+    cv::Ptr<cv::cuda::CLAHE> clahe = cv::cuda::createCLAHE(3.0, cv::Size(8, 8));
     clahe->apply(lab_planes[0], lab_planes[0]);
-    merge(lab_planes, lab_image);
-    cvtColor(lab_image, image, COLOR_Lab2BGR);
+
+    cv::cuda::merge(lab_planes, lab_image);
+    cv::cuda::cvtColor(lab_image, gpu_image, cv::COLOR_Lab2BGR);
+}
+
+void cudaGaussianBlur(const cv::cuda::GpuMat& src, cv::cuda::GpuMat& dst, cv::Size ksize, double sigmaX, double sigmaY) {
+    cv::Ptr<cv::cuda::Filter> filter = cv::cuda::createGaussianFilter(src.type(), dst.type(), ksize, sigmaX, sigmaY);
+    filter->apply(src, dst);
 }
 
 int main(int argc, char** argv) {
@@ -40,12 +61,16 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Mat frame, prev_frame, prev_gray, long_exposure_frame;
+    Mat frame, prev_frame, prev_gray;
+    cv::cuda::GpuMat gpu_frame, gpu_gray, gpu_prev_gray, gpu_blurred, gpu_diff, gpu_threshold, gpu_dilated;
+    Mat long_exposure_frame;
     bool motion_detected = false;
 
     cap >> prev_frame;
     cvtColor(prev_frame, prev_gray, COLOR_BGR2GRAY);
-    GaussianBlur(prev_gray, prev_gray, Size(21, 21), 0);
+
+    gpu_prev_gray.upload(prev_gray);
+    cudaGaussianBlur(gpu_prev_gray, gpu_prev_gray, Size(21, 21), 0);
 
     srand(time(0));
     vector<Point> original_positions, pixel_positions;
@@ -66,23 +91,35 @@ int main(int argc, char** argv) {
             break;
         }
 
-        enhance_contrast(frame);
+        gpu_frame.upload(frame);
 
-        Mat gray_frame, frame_diff, threshold_frame;
-        cvtColor(frame, gray_frame, COLOR_BGR2GRAY);
-        GaussianBlur(gray_frame, gray_frame, Size(21, 21), 0);
+        enhance_contrast(gpu_frame);
 
-        absdiff(prev_gray, gray_frame, frame_diff);
-        threshold(frame_diff, threshold_frame, 25, 255, THRESH_BINARY);
-        dilate(threshold_frame, threshold_frame, Mat(), Point(-1, -1), 2);
+        cv::cuda::cvtColor(gpu_frame, gpu_gray, COLOR_BGR2GRAY);
+        cudaGaussianBlur(gpu_gray, gpu_blurred, Size(21, 21), 0);
 
-        motion_detected = sum(threshold_frame)[0] > 10000;
-        prev_gray = gray_frame.clone();
+        // CUDA-accelerated absdiff
+        cv::cuda::absdiff(gpu_prev_gray, gpu_blurred, gpu_diff);
+
+        // CUDA-accelerated threshold
+        cv::cuda::threshold(gpu_diff, gpu_threshold, 25, 255, THRESH_BINARY);
+
+        cv::Ptr<cv::cuda::Filter> dilate_filter = cv::cuda::createMorphologyFilter(MORPH_DILATE, gpu_threshold.type(), Mat(), Point(-1, -1), 2);
+        dilate_filter->apply(gpu_threshold, gpu_dilated);
+
+        gpu_dilated.download(frame);
+        motion_detected = sum(frame)[0] > 10000;
+
+        gpu_prev_gray = gpu_blurred.clone();
 
         Mat resized_frame, pixelated_frame;
-        resize(frame, resized_frame, Size(PIXELATED_WIDTH, PIXELATED_HEIGHT), 0, 0, INTER_LINEAR);
+        gpu_frame.download(resized_frame); // Download only for operations not available on GPU
+        resize(resized_frame, resized_frame, Size(PIXELATED_WIDTH, PIXELATED_HEIGHT), 0, 0, INTER_LINEAR);
 
-        quantize_colors(resized_frame);
+        cv::cuda::GpuMat gpu_resized_frame;
+        gpu_resized_frame.upload(resized_frame);
+        quantize_colors(gpu_resized_frame);
+        gpu_resized_frame.download(resized_frame); // Download after quantization
 
         resize(resized_frame, pixelated_frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_NEAREST);
 
@@ -111,16 +148,11 @@ int main(int argc, char** argv) {
             circle(canvas, Point(pos.x * spacing_x + spacing_x / 2, pos.y * spacing_y + spacing_y / 2), radius, Scalar(color[0], color[1], color[2]), -1);
         }
 
-        // Convert canvas to the same type as long_exposure_frame
         Mat canvas_float;
         canvas.convertTo(canvas_float, CV_32FC3);
-
-        // Convert canvas_float to 8-bit and invert the colors
         Mat canvas_inverted;
         canvas_float.convertTo(canvas_inverted, CV_8UC3);
         bitwise_not(canvas_inverted, canvas_inverted);
-
-        // Convert the inverted canvas back to float
         canvas_inverted.convertTo(canvas_float, CV_32FC3);
 
         addWeighted(long_exposure_frame, 0.95, canvas_float, 0.05, 0, long_exposure_frame);
@@ -140,4 +172,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-

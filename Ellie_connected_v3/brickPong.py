@@ -269,9 +269,9 @@ class Game:
         self.hand_controller = HandController()
         self.moving_bar = MovingBar(self.width, self.height)
 
-        self.frame_rate = 30
+        self.frame_rate = 5 #original rate 30
         self.last_print_time = time.time()
-        self.print_interval = 1.0
+        self.print_interval = 0.5 #original was 1
 
         self.main_particle = Particle(width // 2, height // 2, speed * 2, direction, (255, 255, 255))
         self.emitter = ParticleEmitter(self.width, self.height, 20, self.main_particle)
