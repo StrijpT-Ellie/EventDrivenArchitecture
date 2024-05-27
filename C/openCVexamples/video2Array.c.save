@@ -1,12 +1,10 @@
 //this file takes video from default camera and renders it to pixelated array
 //made on Apple Silicon, might require some changes to work on other platforms 
 
-//On Jetson Nano 
-//Set path 
-//include </usr/include/opencv4/opencv2/opencv.hpp>
-
+//On jetson Nano 
 //Compile 
-//g++ -std=c++11 -x c++ -I/usr/include/opencv4 video2Array.c -L/usr/lib/aarch64-linux-gnu -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_videoio -o video2Array
+//
+
 
 //Set path properly (installed opencv with homebrew requires path be like)
 //</opt/homebrew/Cellar/opencv/4.9.0_8.reinstall/include/opencv4/opencv2/opencv.hpp>

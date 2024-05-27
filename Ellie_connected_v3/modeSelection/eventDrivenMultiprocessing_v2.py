@@ -355,7 +355,7 @@ class EventHandler(mp.Process):
                     print(f"[DEBUG] Mode selected: {selected_mode}")
                     if selected_mode == 2:  # Launch game mode
                         print("[DEBUG] Launching game mode script.")
-                        self.current_process = subprocess.Popen(["python3", "brickPongForJetson_v2.py"])
+                        self.current_process = subprocess.Popen(["python3.11", "brickpongForJetson_v2.py"])
 
                         # Monitor game activity in the same process
                         self.monitor_game_activity()
