@@ -7,7 +7,8 @@ import mediapipe as mp
 import math
 import time
 from datetime import datetime
-from numba import cuda, float32, int32
+from numba import cuda
+import cProfile
 
 @cuda.jit
 def move_particles(x, y, dx, dy, ax, ay, damping, width, height, lifespan):
@@ -104,7 +105,7 @@ class ParticleEmitter:
         self.ax = np.zeros(num_particles, dtype=np.float32)
         self.ay = np.zeros(num_particles, dtype=np.float32)
         self.lifespan = np.zeros(num_particles, dtype=np.int32)
-        self.colors = [None] * num_particles
+        self.colors = np.zeros((num_particles, 3), dtype=np.int32)
 
     def generate_particle(self, idx):
         self.x[idx] = self.screen_width // 2
@@ -114,7 +115,7 @@ class ParticleEmitter:
         self.ax[idx] = random.uniform(-1, 1)
         self.ay[idx] = random.uniform(-1, 1)
         self.lifespan[idx] = 300
-        self.colors[idx] = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        self.colors[idx] = [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
 
     def trigger(self):
         for i in range(self.num_particles):
@@ -139,7 +140,7 @@ class ParticleEmitter:
 
     def draw(self, screen):
         for i in range(self.num_particles):
-            pygame.draw.circle(screen, self.colors[i], (int(self.x[i]), int(self.y[i])), 20)
+            pygame.draw.circle(screen, tuple(self.colors[i]), (int(self.x[i]), int(self.y[i])), 20)
 
 class Block:
     def __init__(self, x, y, width, height, color):
