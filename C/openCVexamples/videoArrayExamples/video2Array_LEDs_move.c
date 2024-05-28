@@ -1,3 +1,9 @@
+//this script creates an array and projects a video on it
+//it is returned as large pixels capable of changing color 
+//when red color is detected it makes red pixels to float around the screen 
+//seems to be to intense with a lot of red 
+//must make it more mind, less red 
+
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudawarping.hpp>
@@ -8,9 +14,9 @@
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
 #define DISPLAY_WIDTH 640
-#define DISPLAY_HEIGHT 480
+#define DISPLAY_HEIGHT 640
 #define LED_SPACING 5
-#define FLOAT_DURATION 100
+#define FLOAT_DURATION 10
 
 using namespace cv;
 using namespace std;
@@ -159,5 +165,5 @@ int main(int argc, char** argv) {
 }
 
 
-// g++ -std=c++11 -x c++ -I/usr/include/opencv4 video2Array_LEDs.c -L/usr/lib/aarch64-linux-gnu -L/usr/local/cuda-10.2/lib64 -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_videoio -lopencv_cudaarithm -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudaobjdetect -lopencv_cudafilters -o video2Array_LEDs
+// g++ -std=c++11 -x c++ -I/usr/include/opencv4 video2Array_LEDs_move.c -L/usr/lib/aarch64-linux-gnu -L/usr/local/cuda-10.2/lib64 -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_videoio -lopencv_cudaarithm -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudaobjdetect -lopencv_cudafilters -o video2Array_LEDs_move
 //./video2Array_LEDs
