@@ -12,14 +12,13 @@
 using namespace cv;
 using namespace std;
 
-void quantize_colors(cv::cuda::GpuMat &image) {
-    image.convertTo(image, CV_8UC3);
-    cv::cuda::GpuMat channels[3];
-    cv::cuda::split(image, channels);
+void quantize_colors(cv::Mat &image) {
+    vector<Mat> channels;
+    split(image, channels);
     for (int i = 0; i < 3; i++) {
-        cv::cuda::threshold(channels[i], channels[i], 127, 255, THRESH_BINARY);
+        threshold(channels[i], channels[i], 127, 255, THRESH_BINARY);
     }
-    cv::cuda::merge(channels, 3, image);
+    merge(channels, image);
 }
 
 int main(int argc, char** argv) {
@@ -53,11 +52,14 @@ int main(int argc, char** argv) {
         // Resize the frame to match the LED PCB wall resolution using GPU
         cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
 
-        // Quantize the colors
-        quantize_colors(d_resizedFrame);
-
-        // Download the quantized frame back to the CPU
+        // Download the resized frame back to the CPU
         d_resizedFrame.download(frame);
+
+        // Quantize the colors
+        quantize_colors(frame);
+
+        // Upload the quantized frame back to the GPU
+        d_quantizedFrame.upload(frame);
 
         // Create a new image to represent the LED wall with spacing
         Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, Scalar(0, 0, 0));
