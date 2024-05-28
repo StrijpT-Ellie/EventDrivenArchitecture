@@ -5,6 +5,8 @@
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
+#define DISPLAY_WIDTH 640
+#define DISPLAY_HEIGHT 480
 
 int main(int argc, char** argv) {
     // Open the default camera
@@ -19,7 +21,7 @@ int main(int argc, char** argv) {
 
     // Create a window and resize it
     cv::namedWindow("LED PCB Wall Simulation", cv::WINDOW_NORMAL);
-    cv::resizeWindow("LED PCB Wall Simulation", 640, 480);
+    cv::resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     cv::Mat frame;
     cv::cuda::GpuMat d_frame, d_resizedFrame;
