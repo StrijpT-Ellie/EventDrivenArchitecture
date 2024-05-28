@@ -8,6 +8,7 @@ import math
 import time
 from datetime import datetime
 from numba import cuda, float32, int32
+import cProfile
 
 @cuda.jit
 def move_particles(x, y, dx, dy, ax, ay, damping, width, height, lifespan):
@@ -105,6 +106,7 @@ class ParticleEmitter:
         self.ay = np.zeros(num_particles, dtype=np.float32)
         self.lifespan = np.zeros(num_particles, dtype=np.int32)
         self.colors = [(0, 0, 0)] * num_particles
+        self.damping = 0.98  # Adding the damping attribute
 
     def generate_particle(self, idx):
         self.x[idx] = self.screen_width // 2
