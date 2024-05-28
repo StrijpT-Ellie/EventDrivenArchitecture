@@ -8,7 +8,6 @@ import math
 import time
 from datetime import datetime
 from numba import cuda, float32, int32
-import cProfile
 
 @cuda.jit
 def move_particles(x, y, dx, dy, ax, ay, damping, width, height, lifespan):
@@ -140,7 +139,11 @@ class ParticleEmitter:
 
     def draw(self, screen):
         for i in range(self.num_particles):
-            pygame.draw.circle(screen, self.colors[i], (int(self.x[i]), int(self.y[i])), 20)
+            color = self.colors[i]
+            if not isinstance(color, tuple) or len(color) != 3:
+                print(f"Invalid color at index {i}: {color}")
+                color = (255, 255, 255)  # Default to white
+            pygame.draw.circle(screen, color, (int(self.x[i]), int(self.y[i])), 20)
 
 class Block:
     def __init__(self, x, y, width, height, color):
