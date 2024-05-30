@@ -7,6 +7,7 @@ import mediapipe as mp
 import math
 import matplotlib.pyplot as plt
 import time
+from numba import cuda, float32, int32
 
 def visualize_array(array):
     plt.imshow(array, cmap='gray', interpolation='nearest')
@@ -179,6 +180,16 @@ class BlockEmitter:
         for block in self.blocks:
             block.draw(screen)
 
+# CUDA kernel for updating particle acceleration
+@cuda.jit
+def update_particle_acceleration_kernel(dx, dy, ax, ay, damping):
+    idx = cuda.grid(1)
+    if idx < dx.size:
+        dx[idx] += ax[idx]
+        dy[idx] += ay[idx]
+        dx[idx] *= damping
+        dy[idx] *= damping
+
 class Game:
     def __init__(self, width, height, grid_size, direction, num_particles, speed):
         pygame.init()
@@ -242,8 +253,34 @@ class Game:
                         block_emitter.trigger(25)  # Emit 25 blocks
 
             if self.mode == 'autopilot':
-                for particle in self.particles:
-                    particle.update_acceleration(random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01))  # Add random acceleration
+                # Prepare data for CUDA kernel
+                dx = np.array([p.dx for p in self.particles], dtype=np.float32)
+                dy = np.array([p.dy for p in self.particles], dtype=np.float32)
+                ax = np.array([p.ax for p in self.particles], dtype=np.float32)
+                ay = np.array([p.ay for p in self.particles], dtype=np.float32)
+                damping = np.float32(0.99)
+
+                # Transfer data to GPU
+                dx_gpu = cuda.to_device(dx)
+                dy_gpu = cuda.to_device(dy)
+                ax_gpu = cuda.to_device(ax)
+                ay_gpu = cuda.to_device(ay)
+
+                # Define CUDA kernel grid and block dimensions
+                threads_per_block = 256
+                blocks_per_grid = (dx.size + (threads_per_block - 1)) // threads_per_block
+
+                # Run CUDA kernel
+                update_particle_acceleration_kernel[blocks_per_grid, threads_per_block](dx_gpu, dy_gpu, ax_gpu, ay_gpu, damping)
+
+                # Transfer results back to CPU
+                dx = dx_gpu.copy_to_host()
+                dy = dy_gpu.copy_to_host()
+
+                # Update particles with new velocities
+                for i, particle in enumerate(self.particles):
+                    particle.dx = dx[i]
+                    particle.dy = dy[i]
                     particle.move(self.width, self.height)
             elif self.mode == 'manual':
                 direction = self.hand_controller.get_direction()
