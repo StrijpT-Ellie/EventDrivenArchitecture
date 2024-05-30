@@ -8,7 +8,6 @@ import math
 import matplotlib.pyplot as plt
 import time
 import torch
-import cupy as cp
 
 def visualize_array(array):
     plt.imshow(array, cmap='gray', interpolation='nearest')
@@ -280,17 +279,17 @@ class Game:
             # Get the pixel values of the screen as a numpy array
             screen_array = pygame.surfarray.array3d(self.screen)
 
-            # Move the array to GPU for processing
-            screen_array_gpu = cp.asarray(screen_array)
+            # Move the array to GPU for processing using PyTorch
+            screen_array_gpu = torch.from_numpy(screen_array).float().cuda()
 
             # Resize the array to 20x20 on GPU
-            resized_array_gpu = cp.array(cv2.resize(cp.asnumpy(screen_array_gpu), (20, 20)))
+            resized_array_gpu = torch.nn.functional.interpolate(screen_array_gpu.permute(2, 0, 1).unsqueeze(0), size=(20, 20), mode='bilinear').squeeze().permute(1, 2, 0)
 
             # Reduce the color depth to 8-bit on GPU
-            reduced_color_array_gpu = (resized_array_gpu / 32).astype(cp.uint8) * 32
+            reduced_color_array_gpu = (resized_array_gpu / 32).byte() * 32
 
             # Move back to CPU
-            reduced_color_array = cp.asnumpy(reduced_color_array_gpu)
+            reduced_color_array = reduced_color_array_gpu.cpu().numpy()
 
             # Store the array in self.output_arrays
             self.output_arrays.append(reduced_color_array)
