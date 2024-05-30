@@ -1,14 +1,14 @@
+
 import threading
 import pygame
 import random
 import cv2
 import numpy as np
 import mediapipe as mp
+import cv2
 import math
 import matplotlib.pyplot as plt
 import time
-import torch
-import cupy as cp
 
 def visualize_array(array):
     plt.imshow(array, cmap='gray', interpolation='nearest')
@@ -43,6 +43,7 @@ class HandController:
                         direction = 'right' if dx > 0 else 'left'
                     else:
                         direction = 'down' if dy > 0 else 'up'
+                    #print(f"Hand movement: dx={dx}, dy={dy}, direction={direction}")  # Debug print
 
             self.old_hand_landmarks = hand_landmarks  # Update old_hand_landmarks
 
@@ -51,6 +52,7 @@ class HandController:
     def release(self):
         self.cap.release()
         self.hands.close()
+        
 
 class Particle:
     def __init__(self, x, y, speed, direction, color):
@@ -94,7 +96,7 @@ class Particle:
     def update_acceleration(self, ax, ay):
         self.ax = ax * self.damping
         self.ay = ay * self.damping
-
+        
 class ParticleEmitter:
     def __init__(self, screen_width, screen_height, num_particles, main_particle):
         self.screen_width = screen_width
@@ -137,12 +139,13 @@ class ParticleEmitter:
 
     def draw(self, screen):
         for particle in self.particles:
-            pygame.draw.circle(screen, particle.color, (int(particle.x), int(particle.y)), 20)
+            pygame.draw.circle(screen, particle.color, (particle.x, particle.y), 20)
 
     def check_collision(self, particle1, particle2):
         # Check if two particles collide (simple collision detection based on distance)
         distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
         return distance < 12  # Modify this threshold as needed
+
 
 class Block:
     def __init__(self, x, y, width, height, color):
@@ -181,6 +184,10 @@ class BlockEmitter:
         for block in self.blocks:
             block.draw(screen)
 
+
+
+
+     
 class Game:
     def __init__(self, width, height, grid_size, direction, num_particles, speed):
         pygame.init()
@@ -201,6 +208,7 @@ class Game:
         # Create the particle emitter with a reference to the main particle
         self.emitter = ParticleEmitter(self.width, self.height, 25, self.main_particle)
 
+
         # Define the particles attribute
         self.particles = [Particle(i % grid_size * (width // grid_size), 
                            i // grid_size * (height // grid_size), 
@@ -212,6 +220,7 @@ class Game:
         self.output_arrays = []
         
     def run(self):
+        
         running = True
         emitter = None
         block_emitter = BlockEmitter(self.width, self.height, 50)
@@ -240,8 +249,11 @@ class Game:
                         emitter = ParticleEmitter(self.width, self.height, 25, self.particles[0])  # Assuming the main particle is at index 0
                         emitter.trigger()
 
+
                     elif event.key == pygame.K_b:  # Press "b" to trigger the block emitter
                         block_emitter.trigger(25)  # Emit 25 blocks
+
+                   
 
             if self.mode == 'autopilot':
                 for particle in self.particles:
@@ -249,6 +261,7 @@ class Game:
                     particle.move(self.width, self.height)
             elif self.mode == 'manual':
                 direction = self.hand_controller.get_direction()
+                #print(f"Hand direction: {direction}")  # Debug print
                 move_factor = 50  # Adjust this value to change the movement distance
                 for particle in self.particles:
                     if direction == 'up':
@@ -265,6 +278,7 @@ class Game:
                         particle.x = min(self.width, particle.x + particle.speed * move_factor)
                     particle.move(self.width, self.height)  # Move the particle with the updated acceleration
                     particle.update_acceleration(0, 0)  # Reset acceleration to zero
+                
 
                 # Update and draw the blocks
                 block_emitter.update(self.particles)
@@ -277,20 +291,16 @@ class Game:
                 # Update particles with blocks
                 self.emitter.update(block_emitter.blocks)  # Pass the list of blocks to the particle emitter update method
 
-            # Get the pixel values of the screen as a numpy array
+           
+
+        # Get the pixel values of the screen as a numpy array
             screen_array = pygame.surfarray.array3d(self.screen)
 
-            # Move the array to GPU for processing
-            screen_array_gpu = cp.asarray(screen_array)
+            # Resize the array to 20x20
+            resized_array = cv2.resize(screen_array, (20, 20))
 
-            # Resize the array to 20x20 on GPU
-            resized_array_gpu = cp.array(cv2.resize(cp.asnumpy(screen_array_gpu), (20, 20)))
-
-            # Reduce the color depth to 8-bit on GPU
-            reduced_color_array_gpu = (resized_array_gpu / 32).astype(cp.uint8) * 32
-
-            # Move back to CPU
-            reduced_color_array = cp.asnumpy(reduced_color_array_gpu)
+            # Reduce the color depth to 8-bit
+            reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
 
             # Store the array in self.output_arrays
             self.output_arrays.append(reduced_color_array)
@@ -310,9 +320,16 @@ class Game:
             if frame_counter % N == 0:
                 threading.Thread(target=visualize_array, args=(reduced_color_array,)).start()
 
+
         self.hand_controller.release()
         pygame.quit()
+
+    #def get_output_arrays(self):
+    # Print the first 5 output arrays
+        #for array in self.output_arrays[:50]:
+            #print(array)
 
 if __name__ == "__main__":
     game = Game(600, 600, 20, 1, 50, 0.1)
     game.run()
+    game.get_output_arrays()
