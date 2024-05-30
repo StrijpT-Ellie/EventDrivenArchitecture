@@ -7,7 +7,6 @@ import mediapipe as mp
 import math
 import matplotlib.pyplot as plt
 import time
-import vpi
 
 def visualize_array(array):
     plt.imshow(array, cmap='gray', interpolation='nearest')
@@ -279,15 +278,14 @@ class Game:
             # Get the pixel values of the screen as a numpy array
             screen_array = pygame.surfarray.array3d(self.screen)
 
-            # Convert to VPI Image
-            with vpi.Backend.CUDA:
-                vpi_image = vpi.asimage(screen_array)
-
-                # Resize the array to 20x20
-                resized_image = vpi_image.rescale((20, 20), interp=vpi.Interp.LINEAR)
-
-                # Copy back to host
-                resized_array = resized_image.cpu()
+            # Resize the array to 20x20 using OpenCV with CUDA
+            if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+                gpu_mat = cv2.cuda_GpuMat()
+                gpu_mat.upload(screen_array)
+                gpu_resized = cv2.cuda.resize(gpu_mat, (20, 20))
+                resized_array = gpu_resized.download()
+            else:
+                resized_array = cv2.resize(screen_array, (20, 20))
 
             # Reduce the color depth to 8-bit
             reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
