@@ -7,7 +7,7 @@ import mediapipe as mp
 import math
 import matplotlib.pyplot as plt
 import time
-import torch
+import vpi
 
 def visualize_array(array):
     plt.imshow(array, cmap='gray', interpolation='nearest')
@@ -22,7 +22,7 @@ class HandController:
         self.old_hand_landmarks = None
 
     def get_direction(self):
-        direction = 'none'  
+        direction = 'none'
         ret, frame = self.cap.read()
         frame = cv2.flip(frame, 1)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -55,8 +55,8 @@ class Particle:
     def __init__(self, x, y, speed, direction, color):
         self.x = x
         self.y = y
-        self.speed = speed 
-        self.color = color 
+        self.speed = speed
+        self.color = color
         self.direction = direction
         self.dx = random.choice([-speed, speed])
         self.dy = random.choice([-speed, speed])
@@ -279,17 +279,18 @@ class Game:
             # Get the pixel values of the screen as a numpy array
             screen_array = pygame.surfarray.array3d(self.screen)
 
-            # Move the array to GPU for processing using PyTorch
-            screen_array_gpu = torch.from_numpy(screen_array).float().cuda()
+            # Convert to VPI Image
+            with vpi.Backend.CUDA:
+                vpi_image = vpi.asimage(screen_array)
 
-            # Resize the array to 20x20 on GPU
-            resized_array_gpu = torch.nn.functional.interpolate(screen_array_gpu.permute(2, 0, 1).unsqueeze(0), size=(20, 20), mode='bilinear').squeeze().permute(1, 2, 0)
+                # Resize the array to 20x20
+                resized_image = vpi_image.rescale((20, 20), interp=vpi.Interp.LINEAR)
 
-            # Reduce the color depth to 8-bit on GPU
-            reduced_color_array_gpu = (resized_array_gpu / 32).byte() * 32
+                # Copy back to host
+                resized_array = resized_image.cpu()
 
-            # Move back to CPU
-            reduced_color_array = reduced_color_array_gpu.cpu().numpy()
+            # Reduce the color depth to 8-bit
+            reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
 
             # Store the array in self.output_arrays
             self.output_arrays.append(reduced_color_array)
