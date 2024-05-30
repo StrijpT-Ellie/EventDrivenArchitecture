@@ -62,6 +62,33 @@ class Particle:
         self.damping = 0.98
         self.lifespan = lifespan
 
+    def move(self, width, height):
+        self.dx += self.ax
+        self.dy += self.ay
+        
+        self.dx *= self.damping
+        self.dy *= self.damping
+
+        next_x = self.x + self.dx
+        next_y = self.y + self.dy
+
+        if self.lifespan is not None:
+            self.lifespan -= 1
+
+        if next_x < 0 or next_x > width:
+            self.dx *= -1
+        if next_y < 0 or next_y > height:
+            self.dy *= -1
+
+        self.x += self.dx
+        self.y += self.dy
+
+    def update_params(self, speed, direction):
+        self.speed = speed
+        self.direction = direction
+        self.dx = speed * np.cos(np.radians(direction))
+        self.dy = speed * np.sin(np.radians(direction))
+
     def update_acceleration(self, ax, ay):
         self.ax = ax * self.damping
         self.ay = ay * self.damping
@@ -74,13 +101,13 @@ class ParticleEmitter:
         self.particles = []
         self.main_particle = main_particle
 
-        self.x = cp.zeros(num_particles, dtype=cp.float32)
-        self.y = cp.zeros(num_particles, dtype=cp.float32)
-        self.dx = cp.zeros(num_particles, dtype=cp.float32)
-        self.dy = cp.zeros(num_particles, dtype=cp.float32)
-        self.ax = cp.zeros(num_particles, dtype=cp.float32)
-        self.ay = cp.zeros(num_particles, dtype=cp.float32)
-        self.lifespan = cp.zeros(num_particles, dtype=cp.int32)
+        self.x = cp.empty(num_particles, dtype=cp.float32)
+        self.y = cp.empty(num_particles, dtype=cp.float32)
+        self.dx = cp.empty(num_particles, dtype=cp.float32)
+        self.dy = cp.empty(num_particles, dtype=cp.float32)
+        self.ax = cp.empty(num_particles, dtype=cp.float32)
+        self.ay = cp.empty(num_particles, dtype=cp.float32)
+        self.lifespan = cp.empty(num_particles, dtype=cp.int32)
         self.colors = [(0, 0, 0)] * num_particles
         self.damping = 0.98
 
@@ -120,7 +147,11 @@ class ParticleEmitter:
             if not isinstance(color, tuple) or len(color) != 3:
                 print(f"Invalid color at index {i}: {color}")
                 color = (255, 255, 255)  # Default to white
-            pygame.draw.circle(screen, color, (int(self.x[i]), int(self.y[i])), 20)
+            pygame.draw.circle(screen, color, (int(cp.asnumpy(self.x[i])), int(cp.asnumpy(self.y[i]))), 20)
+
+    def check_collision(self, particle1, particle2):
+        distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
+        return distance < 12
 
 class Block:
     def __init__(self, x, y, width, height, color):
@@ -155,7 +186,6 @@ class BlockEmitter:
 
     def update(self, particles):
         blocks_to_remove = []
-
         for block in self.blocks[:]:
             for i in range(len(particles.x)):
                 if block.x < particles.x[i] < block.x + block.width and block.y < particles.y[i] < block.y + block.height:
