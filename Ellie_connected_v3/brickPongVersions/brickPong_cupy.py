@@ -7,6 +7,7 @@ import cupy as cp
 import mediapipe as mp
 import math
 import time
+import cProfile
 from datetime import datetime
 
 class HandController:
@@ -101,24 +102,34 @@ class ParticleEmitter:
         self.particles = []
         self.main_particle = main_particle
 
-        self.x = cp.empty(num_particles, dtype=cp.float32)
-        self.y = cp.empty(num_particles, dtype=cp.float32)
-        self.dx = cp.empty(num_particles, dtype=cp.float32)
-        self.dy = cp.empty(num_particles, dtype=cp.float32)
-        self.ax = cp.empty(num_particles, dtype=cp.float32)
-        self.ay = cp.empty(num_particles, dtype=cp.float32)
-        self.lifespan = cp.empty(num_particles, dtype=cp.int32)
+        # Using CuPy memory allocation functions
+        self.x = cp.cuda.memory.alloc(num_particles * cp.float32().nbytes)
+        self.y = cp.cuda.memory.alloc(num_particles * cp.float32().nbytes)
+        self.dx = cp.cuda.memory.alloc(num_particles * cp.float32().nbytes)
+        self.dy = cp.cuda.memory.alloc(num_particles * cp.float32().nbytes)
+        self.ax = cp.cuda.memory.alloc(num_particles * cp.float32().nbytes)
+        self.ay = cp.cuda.memory.alloc(num_particles * cp.float32().nbytes)
+        self.lifespan = cp.cuda.memory.alloc(num_particles * cp.int32().nbytes)
         self.colors = [(0, 0, 0)] * num_particles
         self.damping = 0.98
 
     def generate_particle(self, idx):
-        self.x[idx] = self.screen_width // 2
-        self.y[idx] = self.screen_height // 2
-        self.dx[idx] = random.randint(1, 10)
-        self.dy[idx] = random.randint(1, 10)
-        self.ax[idx] = random.uniform(-1, 1)
-        self.ay[idx] = random.uniform(-1, 1)
-        self.lifespan[idx] = 300
+        x = np.full((1,), self.screen_width // 2, dtype=np.float32)
+        y = np.full((1,), self.screen_height // 2, dtype=np.float32)
+        dx = np.random.randint(1, 10, (1,), dtype=np.float32)
+        dy = np.random.randint(1, 10, (1,), dtype=np.float32)
+        ax = np.random.uniform(-1, 1, (1,), dtype=np.float32)
+        ay = np.random.uniform(-1, 1, (1,), dtype=np.float32)
+        lifespan = np.full((1,), 300, dtype=np.int32)
+
+        cp.cuda.runtime.memcpy(dst=self.x.ptr + idx * cp.float32().nbytes, src=x.ctypes.data, size=x.nbytes)
+        cp.cuda.runtime.memcpy(dst=self.y.ptr + idx * cp.float32().nbytes, src=y.ctypes.data, size=y.nbytes)
+        cp.cuda.runtime.memcpy(dst=self.dx.ptr + idx * cp.float32().nbytes, src=dx.ctypes.data, size=dx.nbytes)
+        cp.cuda.runtime.memcpy(dst=self.dy.ptr + idx * cp.float32().nbytes, src=dy.ctypes.data, size=dy.nbytes)
+        cp.cuda.runtime.memcpy(dst=self.ax.ptr + idx * cp.float32().nbytes, src=ax.ctypes.data, size=ax.nbytes)
+        cp.cuda.runtime.memcpy(dst=self.ay.ptr + idx * cp.float32().nbytes, src=ay.ctypes.data, size=ay.nbytes)
+        cp.cuda.runtime.memcpy(dst=self.lifespan.ptr + idx * cp.int32().nbytes, src=lifespan.ctypes.data, size=lifespan.nbytes)
+
         self.colors[idx] = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
     def trigger(self):
@@ -147,7 +158,9 @@ class ParticleEmitter:
             if not isinstance(color, tuple) or len(color) != 3:
                 print(f"Invalid color at index {i}: {color}")
                 color = (255, 255, 255)  # Default to white
-            pygame.draw.circle(screen, color, (int(cp.asnumpy(self.x[i])), int(cp.asnumpy(self.y[i]))), 20)
+            x = cp.ndarray((1,), cp.float32, cp.cuda.memory.MemoryPointer(self.x, i * cp.float32().nbytes))
+            y = cp.ndarray((1,), cp.float32, cp.cuda.memory.MemoryPointer(self.y, i * cp.float32().nbytes))
+            pygame.draw.circle(screen, color, (int(x[0]), int(y[0])), 20)
 
     def check_collision(self, particle1, particle2):
         distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
@@ -188,10 +201,14 @@ class BlockEmitter:
         blocks_to_remove = []
         for block in self.blocks[:]:
             for i in range(len(particles.x)):
-                if block.x < particles.x[i] < block.x + block.width and block.y < particles.y[i] < block.y + block.height:
+                x = cp.ndarray((1,), cp.float32, cp.cuda.memory.MemoryPointer(particles.x, i * cp.float32().nbytes))
+                y = cp.ndarray((1,), cp.float32, cp.cuda.memory.MemoryPointer(particles.y, i * cp.float32().nbytes))
+                if block.x < x[0] < block.x + block.width and block.y < y[0] < block.y + block.height:
                     blocks_to_remove.append(block)
-                    particles.dy[i] *= -1
-                    particles.dx[i] += random.uniform(-4, 10)
+                    dy = cp.ndarray((1,), cp.float32, cp.cuda.memory.MemoryPointer(particles.dy, i * cp.float32().nbytes))
+                    dx = cp.ndarray((1,), cp.float32, cp.cuda.memory.MemoryPointer(particles.dx, i * cp.float32().nbytes))
+                    dy[0] *= -1
+                    dx[0] += random.uniform(-4, 10)
                     break
 
         for block in blocks_to_remove:
@@ -344,7 +361,7 @@ if __name__ == "__main__":
     profiler = cProfile.Profile()
     profiler.enable()
     
-    game = Game(600, 600, 20, 1, 1000, 10)
+    game = Game(600, 600, 20, 1, 1, 10)
     game.run()
     
     profiler.disable()
