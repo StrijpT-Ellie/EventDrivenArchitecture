@@ -10,7 +10,7 @@
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
 #define LED_SPACING 5
-#define SETTLE_DURATION 10
+#define SETTLE_DURATION 300  // in frames, assuming 30 FPS this would be ~10 seconds
 #define MAX_NEW_FLOATING_PIXELS 10
 #define MAX_ACCUMULATION_LINES 10
 
@@ -67,7 +67,7 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
     }
 }
 
-void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &frame_size, vector<vector<int>> &accumulated_pixels) {
+void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &frame_size, vector<vector<int>> &accumulated_pixels, vector<vector<int>> &settle_timers) {
     for (auto &fp : floating_pixels) {
         if (fp.position.y < frame_size.height - 1) {
             // Check if the pixel can fall further down
@@ -75,10 +75,12 @@ void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &
                 fp.position.y++;
             } else {
                 accumulated_pixels[fp.position.y][fp.position.x] = 1;
+                settle_timers[fp.position.y][fp.position.x] = SETTLE_DURATION;
                 fp.settle_frames = 0;
             }
         } else {
             accumulated_pixels[fp.position.y][fp.position.x] = 1;
+            settle_timers[fp.position.y][fp.position.x] = SETTLE_DURATION;
             fp.settle_frames = 0;
         }
     }
@@ -87,6 +89,17 @@ void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &
     floating_pixels.erase(remove_if(floating_pixels.begin(), floating_pixels.end(),
                                     [](const FloatingPixel &fp) { return fp.settle_frames <= 0; }),
                           floating_pixels.end());
+
+    // Update the timers and remove pixels that have been settled for too long
+    for (int y = 0; y < frame_size.height; y++) {
+        for (int x = 0; x < frame_size.width; x++) {
+            if (accumulated_pixels[y][x] == 1) {
+                if (--settle_timers[y][x] <= 0) {
+                    accumulated_pixels[y][x] = 0;
+                }
+            }
+        }
+    }
 
     // Clear the top line if more than MAX_ACCUMULATION_LINES are accumulated
     for (int y = frame_size.height - MAX_ACCUMULATION_LINES; y < frame_size.height; ++y) {
@@ -100,6 +113,7 @@ void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &
         if (line_filled) {
             for (int x = 0; x < frame_size.width; ++x) {
                 accumulated_pixels[y][x] = 0;
+                settle_timers[y][x] = 0;
             }
         }
     }
@@ -153,6 +167,7 @@ int main(int argc, char** argv) {
     cuda::GpuMat d_frame, d_resizedFrame;
     vector<FloatingPixel> floating_pixels;
     vector<vector<int>> accumulated_pixels(LED_HEIGHT, vector<int>(LED_WIDTH, 0));
+    vector<vector<int>> settle_timers(LED_HEIGHT, vector<int>(LED_WIDTH, 0));
     srand(time(0));
 
     while (true) {
@@ -179,7 +194,7 @@ int main(int argc, char** argv) {
         detect_and_float_red_pixels(frame, floating_pixels);
 
         // Update positions of floating pixels
-        update_floating_pixels(floating_pixels, frame.size(), accumulated_pixels);
+        update_floating_pixels(floating_pixels, frame.size(), accumulated_pixels, settle_timers);
 
         // Create a new image to represent the LED wall with spacing
         Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, Scalar(0, 0, 0));
