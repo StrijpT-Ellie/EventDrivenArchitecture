@@ -10,9 +10,9 @@
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
 #define LED_SPACING 5
-#define FLOAT_DURATION 10
 #define SETTLE_DURATION 10
 #define MAX_NEW_FLOATING_PIXELS 10
+#define MAX_ACCUMULATION_LINES 10
 
 using namespace cv;
 using namespace std;
@@ -20,7 +20,6 @@ using namespace std;
 struct FloatingPixel {
     Point position;
     Scalar color;
-    int floating_frames;
     int settle_frames;
 };
 
@@ -37,10 +36,10 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
     Mat hsv_frame;
     cvtColor(frame, hsv_frame, COLOR_BGR2HSV);
 
-    // Define red color range
-    Scalar lower_red1 = Scalar(0, 150, 150);
+    // Define a tighter red color range
+    Scalar lower_red1 = Scalar(0, 200, 200);
     Scalar upper_red1 = Scalar(10, 255, 255);
-    Scalar lower_red2 = Scalar(160, 150, 150);
+    Scalar lower_red2 = Scalar(160, 200, 200);
     Scalar upper_red2 = Scalar(180, 255, 255);
 
     Mat mask1, mask2, red_mask;
@@ -57,7 +56,6 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
                     FloatingPixel fp;
                     fp.position = Point(x, y);
                     fp.color = Scalar(0, 0, 255); // Red color
-                    fp.floating_frames = FLOAT_DURATION;
                     fp.settle_frames = SETTLE_DURATION;
                     floating_pixels.push_back(fp);
                     new_floating_pixels_count++;
@@ -69,30 +67,45 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
     }
 }
 
-void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &frame_size) {
+void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &frame_size, vector<vector<int>> &accumulated_pixels) {
     for (auto &fp : floating_pixels) {
-        if (fp.floating_frames > 0) {
-            fp.position.x += rand() % 5 - 2;
-            fp.position.y += rand() % 5 - 2;
-            fp.position.x = max(0, min(frame_size.width - 1, fp.position.x));
-            fp.position.y = max(0, min(frame_size.height - 1, fp.position.y));
-            fp.floating_frames--;
-        } else {
-            if (fp.position.y < frame_size.height - 1) {
+        if (fp.position.y < frame_size.height - 1) {
+            // Check if the pixel can fall further down
+            if (accumulated_pixels[fp.position.y + 1][fp.position.x] == 0) {
                 fp.position.y++;
             } else {
-                fp.settle_frames--;
+                accumulated_pixels[fp.position.y][fp.position.x] = 1;
+                fp.settle_frames = 0;
             }
+        } else {
+            accumulated_pixels[fp.position.y][fp.position.x] = 1;
+            fp.settle_frames = 0;
         }
     }
 
-    // Remove expired floating pixels
+    // Remove settled pixels
     floating_pixels.erase(remove_if(floating_pixels.begin(), floating_pixels.end(),
                                     [](const FloatingPixel &fp) { return fp.settle_frames <= 0; }),
                           floating_pixels.end());
+
+    // Clear the top line if more than MAX_ACCUMULATION_LINES are accumulated
+    for (int y = frame_size.height - MAX_ACCUMULATION_LINES; y < frame_size.height; ++y) {
+        bool line_filled = true;
+        for (int x = 0; x < frame_size.width; ++x) {
+            if (accumulated_pixels[y][x] == 0) {
+                line_filled = false;
+                break;
+            }
+        }
+        if (line_filled) {
+            for (int x = 0; x < frame_size.width; ++x) {
+                accumulated_pixels[y][x] = 0;
+            }
+        }
+    }
 }
 
-void draw_led_wall(Mat &led_wall, const Mat &frame, const vector<FloatingPixel> &floating_pixels) {
+void draw_led_wall(Mat &led_wall, const Mat &frame, const vector<FloatingPixel> &floating_pixels, const vector<vector<int>> &accumulated_pixels) {
     int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
     int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
 
@@ -108,6 +121,16 @@ void draw_led_wall(Mat &led_wall, const Mat &frame, const vector<FloatingPixel> 
     for (const auto &fp : floating_pixels) {
         Rect led_rect(fp.position.x * (led_size_x + LED_SPACING), fp.position.y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
         rectangle(led_wall, led_rect, fp.color, FILLED);
+    }
+
+    // Draw accumulated pixels
+    for (int y = 0; y < LED_HEIGHT; y++) {
+        for (int x = 0; x < LED_WIDTH; x++) {
+            if (accumulated_pixels[y][x] == 1) {
+                Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
+                rectangle(led_wall, led_rect, Scalar(0, 0, 255), FILLED);
+            }
+        }
     }
 }
 
@@ -129,6 +152,7 @@ int main(int argc, char** argv) {
     Mat frame;
     cuda::GpuMat d_frame, d_resizedFrame;
     vector<FloatingPixel> floating_pixels;
+    vector<vector<int>> accumulated_pixels(LED_HEIGHT, vector<int>(LED_WIDTH, 0));
     srand(time(0));
 
     while (true) {
@@ -155,13 +179,13 @@ int main(int argc, char** argv) {
         detect_and_float_red_pixels(frame, floating_pixels);
 
         // Update positions of floating pixels
-        update_floating_pixels(floating_pixels, frame.size());
+        update_floating_pixels(floating_pixels, frame.size(), accumulated_pixels);
 
         // Create a new image to represent the LED wall with spacing
         Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, Scalar(0, 0, 0));
 
         // Draw the LED wall and floating pixels
-        draw_led_wall(led_wall, frame, floating_pixels);
+        draw_led_wall(led_wall, frame, floating_pixels, accumulated_pixels);
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
