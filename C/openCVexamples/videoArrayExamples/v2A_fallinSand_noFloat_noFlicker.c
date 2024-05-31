@@ -4,6 +4,7 @@
 #include <opencv2/cudaimgproc.hpp>
 #include <vector>
 #include <ctime>
+#include <deque>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -13,7 +14,7 @@
 #define SETTLE_DURATION 300  // in frames, assuming 30 FPS this would be ~10 seconds
 #define MAX_NEW_FLOATING_PIXELS 10
 #define MAX_ACCUMULATION_LINES 20
-#define DEBOUNCE_FRAMES 3
+#define FRAME_AVERAGE_COUNT 5
 
 using namespace cv;
 using namespace std;
@@ -197,6 +198,7 @@ int main(int argc, char** argv) {
     vector<vector<int>> accumulated_pixels(LED_HEIGHT, vector<int>(LED_WIDTH, 0));
     vector<vector<int>> settle_timers(LED_HEIGHT, vector<int>(LED_WIDTH, 0));
     vector<vector<PixelState>> pixel_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, {0, false}));
+    deque<Mat> frame_buffer;
     srand(time(0));
 
     while (true) {
@@ -207,20 +209,32 @@ int main(int argc, char** argv) {
             break;
         }
 
+        // Add the frame to the buffer
+        frame_buffer.push_back(frame.clone());
+        if (frame_buffer.size() > FRAME_AVERAGE_COUNT) {
+            frame_buffer.pop_front();
+        }
+
+        // Compute the average frame
+        Mat avg_frame = Mat::zeros(frame.size(), frame.type());
+        for (const Mat &f : frame_buffer) {
+            avg_frame += f / FRAME_AVERAGE_COUNT;
+        }
+
         // Upload the frame to the GPU
-        d_frame.upload(frame);
+        d_frame.upload(avg_frame);
 
         // Resize the frame to match the LED PCB wall resolution using GPU
         cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
 
         // Download the resized frame back to the CPU
-        d_resizedFrame.download(frame);
+        d_resizedFrame.download(avg_frame);
 
         // Quantize the colors
-        quantize_colors(frame);
+        quantize_colors(avg_frame);
 
         // Detect red pixels and add floating effect
-        detect_and_float_red_pixels(frame, floating_pixels, pixel_states);
+        detect_and_float_red_pixels(avg_frame, floating_pixels, pixel_states);
 
         // Update positions of floating pixels
         update_floating_pixels(floating_pixels, Size(LED_WIDTH, LED_HEIGHT), accumulated_pixels, settle_timers);
@@ -229,7 +243,7 @@ int main(int argc, char** argv) {
         Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, Scalar(0, 0, 0));
 
         // Draw the LED wall and floating pixels
-        draw_led_wall(led_wall, frame, floating_pixels, accumulated_pixels);
+        draw_led_wall(led_wall, avg_frame, floating_pixels, accumulated_pixels);
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
