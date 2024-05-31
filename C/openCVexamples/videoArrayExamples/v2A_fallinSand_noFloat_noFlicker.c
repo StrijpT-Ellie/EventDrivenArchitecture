@@ -15,6 +15,7 @@
 #define MAX_NEW_FLOATING_PIXELS 10
 #define MAX_ACCUMULATION_LINES 20
 #define FRAME_AVERAGE_COUNT 5
+#define DEBOUNCE_FRAMES 3
 
 using namespace cv;
 using namespace std;
