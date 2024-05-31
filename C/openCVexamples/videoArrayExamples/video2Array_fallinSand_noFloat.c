@@ -12,7 +12,7 @@
 #define LED_SPACING 5
 #define SETTLE_DURATION 300  // in frames, assuming 30 FPS this would be ~10 seconds
 #define MAX_NEW_FLOATING_PIXELS 10
-#define MAX_ACCUMULATION_LINES 10
+#define MAX_ACCUMULATION_LINES 20
 
 using namespace cv;
 using namespace std;
@@ -100,23 +100,6 @@ void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &
             }
         }
     }
-
-    // Clear the top line if more than MAX_ACCUMULATION_LINES are accumulated
-    for (int y = frame_size.height - MAX_ACCUMULATION_LINES; y < frame_size.height; ++y) {
-        bool line_filled = true;
-        for (int x = 0; x < frame_size.width; ++x) {
-            if (accumulated_pixels[y][x] == 0) {
-                line_filled = false;
-                break;
-            }
-        }
-        if (line_filled) {
-            for (int x = 0; x < frame_size.width; ++x) {
-                accumulated_pixels[y][x] = 0;
-                settle_timers[y][x] = 0;
-            }
-        }
-    }
 }
 
 void draw_led_wall(Mat &led_wall, const Mat &frame, const vector<FloatingPixel> &floating_pixels, const vector<vector<int>> &accumulated_pixels) {
@@ -194,7 +177,7 @@ int main(int argc, char** argv) {
         detect_and_float_red_pixels(frame, floating_pixels);
 
         // Update positions of floating pixels
-        update_floating_pixels(floating_pixels, frame.size(), accumulated_pixels, settle_timers);
+        update_floating_pixels(floating_pixels, Size(LED_WIDTH, LED_HEIGHT), accumulated_pixels, settle_timers);
 
         // Create a new image to represent the LED wall with spacing
         Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, Scalar(0, 0, 0));
