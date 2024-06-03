@@ -71,7 +71,7 @@ void update_ripple_effects(vector<RippleEffect> &ripple_effects, vector<vector<P
                 int dist = sqrt(pow(ripple.center.x - x, 2) + pow(ripple.center.y - y, 2));
                 if (dist <= ripple.radius) {
                     double ratio = static_cast<double>(ripple.duration) / RIPPLE_DURATION;
-                    led_states[y][x].color = Scalar(0, 255, 255 * (1 - ratio)); // Green to yellow fade
+                    led_states[y][x].color = Scalar(0, 255 * ratio, 255); // Green to yellow fade
                     led_states[y][x].timer = ripple.duration;
                 }
             }
@@ -128,7 +128,6 @@ int main(int argc, char** argv) {
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     Mat frame, prev_frame;
-    cuda::GpuMat d_frame, d_resizedFrame;
     vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), 0 })); // Green color with timer 0
     vector<RippleEffect> ripple_effects;
 
@@ -145,9 +144,7 @@ int main(int argc, char** argv) {
         }
 
         // Resize the frame to match the LED PCB wall resolution using GPU
-        d_frame.upload(frame);
-        cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
-        d_resizedFrame.download(frame);
+        resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
