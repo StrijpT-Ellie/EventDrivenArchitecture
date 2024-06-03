@@ -14,7 +14,8 @@
 #define DISPLAY_HEIGHT 480
 #define LED_SPACING 5
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
-#define RIPPLE_DURATION 60  // Duration for ripple to fade out in frames (approx 2 seconds at 30 FPS)
+#define RIPPLE_DURATION 120  // Duration for ripple to fade out in frames (approx 4 seconds at 30 FPS)
+#define RIPPLE_COOLDOWN 30  // Cooldown period in frames between ripple creations
 
 using namespace cv;
 using namespace std;
@@ -56,18 +57,27 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) 
     }
 }
 
-void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<RippleEffect> &ripple_effects) {
+void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<RippleEffect> &ripple_effects, int &cooldown_timer) {
+    if (cooldown_timer > 0) {
+        cooldown_timer--;
+        return;
+    }
+
     Mat gray_prev, gray_current, diff;
     cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
     cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
     absdiff(gray_prev, gray_current, diff);
     threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
+    bool ripple_created = false;
+
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
-            if (diff.at<uchar>(y, x) > 0) {
+            if (diff.at<uchar>(y, x) > 0 && !ripple_created) {
                 RippleEffect ripple = { Point(x, y), 0, RIPPLE_DURATION, getRandomColor(), getRandomColor() };
                 ripple_effects.push_back(ripple);
+                ripple_created = true;
+                cooldown_timer = RIPPLE_COOLDOWN;  // Reset cooldown timer
             }
         }
     }
@@ -141,6 +151,7 @@ int main(int argc, char** argv) {
     Mat frame, prev_frame;
     vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), Scalar(0, 255, 0), Scalar(0, 255, 0), 0 })); // Green color with timer 0
     vector<RippleEffect> ripple_effects;
+    int cooldown_timer = 0;
 
     // Initialize the LED wall
     Mat led_wall;
@@ -159,7 +170,7 @@ int main(int argc, char** argv) {
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
-            detect_movement(prev_frame, frame, ripple_effects);
+            detect_movement(prev_frame, frame, ripple_effects, cooldown_timer);
         }
 
         // Update the previous frame
