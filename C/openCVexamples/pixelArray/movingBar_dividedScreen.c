@@ -89,10 +89,10 @@ void update_floating_ball(FloatingBall &ball, const Bar &bar) {
 
 void update_bar(Bar &bar, int left_movement_intensity, int right_movement_intensity) {
     if (left_movement_intensity > 0) {
-        bar.position.x -= left_movement_intensity / 500.0; // Adjust the scaling factor as needed
+        bar.position.x += left_movement_intensity / 500.0; // Move right with left movement intensity
     }
     if (right_movement_intensity > 0) {
-        bar.position.x += right_movement_intensity / 500.0; // Adjust the scaling factor as needed
+        bar.position.x -= right_movement_intensity / 500.0; // Move left with right movement intensity
     }
 
     // Clamp the bar's position within the screen bounds
