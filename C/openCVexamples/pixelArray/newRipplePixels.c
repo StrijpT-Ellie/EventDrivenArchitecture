@@ -20,8 +20,9 @@ using namespace cv;
 using namespace std;
 
 struct PixelState {
-    Scalar color;
-    Scalar targetColor;
+    Scalar currentColor;
+    Scalar startColor;
+    Scalar endColor;
     int timer;
 };
 
@@ -42,13 +43,13 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) 
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
     int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
     int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
-    Scalar green_color(0, 255, 0); // Green color
+    Scalar initialColor(0, 0, 0); // Initial color (black)
 
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-            rectangle(led_wall, led_rect, green_color, FILLED);
-            led_states[y][x] = { green_color, green_color, 0 };
+            rectangle(led_wall, led_rect, initialColor, FILLED);
+            led_states[y][x] = { initialColor, initialColor, initialColor, 0 };
         }
     }
 }
@@ -80,11 +81,12 @@ void update_ripple_effects(vector<RippleEffect> &ripple_effects, vector<vector<P
                 int dist = sqrt(pow(ripple.center.x - x, 2) + pow(ripple.center.y - y, 2));
                 if (dist <= ripple.radius) {
                     if (led_states[y][x].timer == 0) {
-                        led_states[y][x].targetColor = getRandomColor();
+                        led_states[y][x].startColor = led_states[y][x].currentColor;
+                        led_states[y][x].endColor = getRandomColor();
+                        led_states[y][x].timer = RIPPLE_DURATION;
                     }
-                    double ratio = static_cast<double>(ripple.duration) / RIPPLE_DURATION;
-                    led_states[y][x].color = led_states[y][x].targetColor * (1 - ratio) + Scalar(0, 255, 0) * ratio;
-                    led_states[y][x].timer = max(led_states[y][x].timer, ripple.duration); // Set the timer to the maximum of current or ripple duration
+                    double ratio = static_cast<double>(led_states[y][x].timer) / RIPPLE_DURATION;
+                    led_states[y][x].currentColor = led_states[y][x].endColor * (1 - ratio) + led_states[y][x].startColor * ratio;
                 }
             }
         }
@@ -101,10 +103,10 @@ void update_led_states(vector<vector<PixelState>> &led_states) {
             if (led_states[y][x].timer > 0) {
                 led_states[y][x].timer--;
                 if (led_states[y][x].timer == 0) {
-                    led_states[y][x].color = Scalar(0, 255, 0); // Green color
+                    led_states[y][x].startColor = led_states[y][x].endColor;
                 } else {
                     double ratio = static_cast<double>(led_states[y][x].timer) / RIPPLE_DURATION;
-                    led_states[y][x].color = led_states[y][x].targetColor * (1 - ratio) + Scalar(0, 255, 0) * ratio;
+                    led_states[y][x].currentColor = led_states[y][x].endColor * (1 - ratio) + led_states[y][x].startColor * ratio;
                 }
             }
         }
@@ -122,7 +124,7 @@ void draw_led_wall(Mat &led_wall, const vector<vector<PixelState>> &led_states) 
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-            rectangle(led_wall, led_rect, led_states[y][x].color, FILLED);
+            rectangle(led_wall, led_rect, led_states[y][x].currentColor, FILLED);
         }
     }
 }
@@ -143,7 +145,7 @@ int main(int argc, char** argv) {
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     Mat frame, prev_frame;
-    vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), Scalar(0, 255, 0), 0 })); // Green color with timer 0
+    vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 0, 0), Scalar(0, 0, 0), Scalar(0, 0, 0), 0 })); // Initial color with timer 0
     vector<RippleEffect> ripple_effects;
 
     // Initialize the LED wall
