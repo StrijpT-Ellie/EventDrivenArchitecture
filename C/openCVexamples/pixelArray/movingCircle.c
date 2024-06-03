@@ -21,7 +21,7 @@ struct FloatingCircle {
 };
 
 void initialize_led_wall(Mat &led_wall) {
-    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+    led_wall = Mat::zeros(DISPLAY_WIDTH, DISPLAY_HEIGHT, CV_8UC3);
 }
 
 void initialize_floating_circle(FloatingCircle &circle) {
@@ -58,11 +58,15 @@ void update_floating_circle(FloatingCircle &circle, const vector<vector<bool>> &
     circle.position += circle.velocity;
 
     // Check for collisions with the edges of the display
-    if (circle.position.x - circle.radius < 0 || circle.position.x + circle.radius > DISPLAY_WIDTH) {
-        circle.velocity.x = -circle.velocity.x;
+    if (circle.position.x - circle.radius < 0) {
+        circle.velocity.x = abs(circle.velocity.x); // Bounce right
+    } else if (circle.position.x + circle.radius > DISPLAY_WIDTH) {
+        circle.velocity.x = -abs(circle.velocity.x); // Bounce left
     }
-    if (circle.position.y - circle.radius < 0 || circle.position.y + circle.radius > DISPLAY_HEIGHT) {
-        circle.velocity.y = -circle.velocity.y;
+    if (circle.position.y - circle.radius < 0) {
+        circle.velocity.y = abs(circle.velocity.y); // Bounce down
+    } else if (circle.position.y + circle.radius > DISPLAY_HEIGHT) {
+        circle.velocity.y = -abs(circle.velocity.y); // Bounce up
     }
 
     // Check for collisions with movement areas
@@ -107,19 +111,7 @@ void draw_led_wall(Mat &led_wall, const vector<vector<bool>> &movement_map, cons
     }
 
     // Draw the floating circle
-    int circle_size = 2 * circle.radius / led_size_x;
-    int cx = circle.position.x / led_size_x;
-    int cy = circle.position.y / led_size_y;
-    for (int y = -circle_size; y <= circle_size; y++) {
-        for (int x = -circle_size; x <= circle_size; x++) {
-            if (cx + x >= 0 && cx + x < LED_WIDTH && cy + y >= 0 && cy + y < LED_HEIGHT) {
-                if (x * x + y * y <= circle_size * circle_size) {
-                    Rect led_rect((cx + x) * (led_size_x + LED_SPACING), (cy + y) * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-                    rectangle(led_wall, led_rect, circle.color, FILLED);
-                }
-            }
-        }
-    }
+    cv::circle(led_wall, circle.position, circle.radius, circle.color, FILLED);
 }
 
 int main(int argc, char** argv) {
