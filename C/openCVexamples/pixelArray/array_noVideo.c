@@ -75,6 +75,10 @@ int main(int argc, char** argv) {
 
     // Capture the first frame
     cap >> frame;
+    if (frame.empty()) {
+        printf("Error: No captured frame on initial read\n");
+        return -1;
+    }
     cvtColor(frame, prev_gray_frame, COLOR_BGR2GRAY);
 
     while (true) {
@@ -119,7 +123,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
-
-//g++ -std=c++11 -x c++ -I/usr/include/opencv4 array_noVideo.c -L/usr/lib/aarch64-linux-gnu -L/usr/local/cuda-10.2/lib64 -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_videoio -lopencv_cudaarithm -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudaobjdetect -lopencv_cudafilters -o video2Array_LEDs_no_video
-./array_noVideo
