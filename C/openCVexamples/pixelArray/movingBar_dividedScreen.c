@@ -154,7 +154,13 @@ int main(int argc, char** argv) {
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
+            // Ensure the previous frame is also flipped
+            flip(prev_frame, prev_frame, 1);
+
             detect_movement(prev_frame, frame, left_movement_intensity, right_movement_intensity);
+
+            // Flip back the frame for consistent display
+            flip(prev_frame, prev_frame, 1);
         }
 
         // Update the previous frame
@@ -175,6 +181,7 @@ int main(int argc, char** argv) {
         // Exit the loop on 'q' key press
         if (waitKey(30) == 'q') break;
     }
+
 
     // Release the camera
     cap.release();
