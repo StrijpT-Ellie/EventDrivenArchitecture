@@ -5,7 +5,7 @@
 #include <vector>
 #include <ctime>
 #include <deque>
-#include <queue>
+#include <cmath>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -18,7 +18,7 @@
 #define FRAME_AVERAGE_COUNT 5
 #define DEBOUNCE_FRAMES 3
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
-#define RIPPLE_DURATION 30  // Duration for each ripple effect in frames
+#define RIPPLE_DURATION 60  // Duration for ripple to fade out in frames (approx 2 seconds at 30 FPS)
 
 using namespace cv;
 using namespace std;
@@ -73,12 +73,11 @@ void update_ripple_effects(vector<RippleEffect> &ripple_effects, vector<vector<P
 
         for (int y = 0; y < LED_HEIGHT; y++) {
             for (int x = 0; x < LED_WIDTH; x++) {
-                if (ripple.duration > 0) {
-                    int dist = sqrt(pow(ripple.center.x - x, 2) + pow(ripple.center.y - y, 2));
-                    if (dist <= ripple.radius && led_states[y][x].timer == 0) {
-                        led_states[y][x].color = Scalar(0, 0, 255); // Red color
-                        led_states[y][x].timer = RIPPLE_DURATION;
-                    }
+                int dist = sqrt(pow(ripple.center.x - x, 2) + pow(ripple.center.y - y, 2));
+                if (dist <= ripple.radius) {
+                    double ratio = static_cast<double>(ripple.duration) / RIPPLE_DURATION;
+                    led_states[y][x].color = Scalar(0, 255 * (1 - ratio), 255 * ratio); // Red to green fade
+                    led_states[y][x].timer = ripple.duration;
                 }
             }
         }
