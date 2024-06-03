@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include <opencv2/cudawarping.hpp>
-#include <opencv2/cudaimgproc.hpp>
 #include <vector>
 #include <ctime>
 
@@ -65,7 +63,6 @@ int main(int argc, char** argv) {
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     Mat frame, prev_frame, gray_frame, prev_gray_frame, frame_diff, motion_mask;
-    cuda::GpuMat d_frame, d_gray_frame, d_prev_gray_frame, d_frame_diff, d_motion_mask;
     srand(time(0));
 
     // Initialize pixels with random colors
@@ -79,7 +76,6 @@ int main(int argc, char** argv) {
     // Capture the first frame
     cap >> frame;
     cvtColor(frame, prev_gray_frame, COLOR_BGR2GRAY);
-    cuda::GpuMat d_prev_frame(prev_gray_frame);
 
     while (true) {
         // Capture a new frame
@@ -92,19 +88,11 @@ int main(int argc, char** argv) {
         // Convert frame to grayscale
         cvtColor(frame, gray_frame, COLOR_BGR2GRAY);
 
-        // Upload frames to the GPU
-        d_frame.upload(frame);
-        d_gray_frame.upload(gray_frame);
-        d_prev_gray_frame.upload(prev_gray_frame);
-
         // Compute the absolute difference between the current frame and the previous frame
-        cuda::absdiff(d_gray_frame, d_prev_gray_frame, d_frame_diff);
+        absdiff(gray_frame, prev_gray_frame, frame_diff);
 
         // Threshold the difference to get the motion mask
-        cuda::threshold(d_frame_diff, d_motion_mask, 25, 255, THRESH_BINARY);
-
-        // Download the motion mask back to the CPU
-        d_motion_mask.download(motion_mask);
+        threshold(frame_diff, motion_mask, 25, 255, THRESH_BINARY);
 
         // Update previous frame
         prev_gray_frame = gray_frame.clone();
@@ -131,6 +119,7 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
 
 //g++ -std=c++11 -x c++ -I/usr/include/opencv4 array_noVideo.c -L/usr/lib/aarch64-linux-gnu -L/usr/local/cuda-10.2/lib64 -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_videoio -lopencv_cudaarithm -lopencv_cudawarping -lopencv_cudaimgproc -lopencv_cudaobjdetect -lopencv_cudafilters -o video2Array_LEDs_no_video
 ./array_noVideo
