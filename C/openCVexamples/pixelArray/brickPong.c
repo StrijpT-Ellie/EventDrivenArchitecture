@@ -46,8 +46,8 @@ void initialize_led_wall(Mat &led_wall) {
 
 void initialize_floating_ball(FloatingBall &ball) {
     ball.position = Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
-    ball.velocity = Point2f(3, 3);  // Velocity of the ball
-    ball.radius = 10;
+    ball.velocity = Point2f(10, 10);  // Velocity of the ball
+    ball.radius = 20;
     ball.color = Scalar(0, 0, 255);  // Red color
 }
 
