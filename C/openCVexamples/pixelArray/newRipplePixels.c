@@ -71,8 +71,8 @@ void update_ripple_effects(vector<RippleEffect> &ripple_effects, vector<vector<P
                 int dist = sqrt(pow(ripple.center.x - x, 2) + pow(ripple.center.y - y, 2));
                 if (dist <= ripple.radius) {
                     double ratio = static_cast<double>(ripple.duration) / RIPPLE_DURATION;
-                    led_states[y][x].color = Scalar(0, 255 * ratio, 255); // Green to yellow fade
-                    led_states[y][x].timer = ripple.duration;
+                    led_states[y][x].color = Scalar(0, 255 * (1 - ratio), 255); // Green to yellow fade
+                    led_states[y][x].timer = max(led_states[y][x].timer, ripple.duration); // Set the timer to the maximum of current or ripple duration
                 }
             }
         }
@@ -90,6 +90,9 @@ void update_led_states(vector<vector<PixelState>> &led_states) {
                 led_states[y][x].timer--;
                 if (led_states[y][x].timer == 0) {
                     led_states[y][x].color = Scalar(0, 255, 0); // Green color
+                } else {
+                    double ratio = static_cast<double>(led_states[y][x].timer) / RIPPLE_DURATION;
+                    led_states[y][x].color = Scalar(0, 255 * (1 - ratio), 255); // Update the fading effect
                 }
             }
         }
@@ -143,7 +146,7 @@ int main(int argc, char** argv) {
             break;
         }
 
-        // Resize the frame to match the LED PCB wall resolution using GPU
+        // Resize the frame to match the LED PCB wall resolution
         resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
 
         // If there's a previous frame, detect movement
