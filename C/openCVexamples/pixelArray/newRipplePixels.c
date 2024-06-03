@@ -1,9 +1,8 @@
 #include <stdio.h>
 #include <opencv2/opencv.hpp>
-#include <opencv2/cudawarping.hpp>
-#include <opencv2/cudaimgproc.hpp>
 #include <vector>
 #include <ctime>
+#include <deque>
 #include <cmath>
 #include <random>
 
@@ -14,7 +13,7 @@
 #define LED_SPACING 5
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
 #define RIPPLE_DURATION 60  // Duration for ripple to fade out in frames (approx 2 seconds at 30 FPS)
-#define FADE_DURATION 300  // Duration to fade to another random color if no movement (approx 10 seconds at 30 FPS)
+#define FADE_DURATION 300  // Duration for screen to fade to a new random color (approx 10 seconds at 30 FPS)
 
 using namespace cv;
 using namespace std;
@@ -45,10 +44,10 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) 
 
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
+            Scalar randomColor = getRandomColor();
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-            Scalar initialColor = getRandomColor();
-            rectangle(led_wall, led_rect, initialColor, FILLED);
-            led_states[y][x] = { initialColor, initialColor, 0 };
+            rectangle(led_wall, led_rect, randomColor, FILLED);
+            led_states[y][x] = { randomColor, randomColor, 0 };
         }
     }
 }
@@ -94,20 +93,34 @@ void update_ripple_effects(vector<RippleEffect> &ripple_effects, vector<vector<P
 }
 
 void update_led_states(vector<vector<PixelState>> &led_states) {
+    bool all_timers_zero = true;
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             if (led_states[y][x].timer > 0) {
                 led_states[y][x].timer--;
-                double ratio = static_cast<double>(led_states[y][x].timer) / RIPPLE_DURATION;
-                led_states[y][x].currentColor = led_states[y][x].targetColor * (1 - ratio) + led_states[y][x].currentColor * ratio;
-            } else {
+                if (led_states[y][x].timer == 0) {
+                    led_states[y][x].currentColor = led_states[y][x].targetColor;
+                } else {
+                    double ratio = static_cast<double>(led_states[y][x].timer) / RIPPLE_DURATION;
+                    led_states[y][x].currentColor = led_states[y][x].targetColor * (1 - ratio) + led_states[y][x].currentColor * ratio;
+                }
+                all_timers_zero = false;
+            }
+        }
+    }
+
+    // If no movement, gradually fade to a new random color
+    if (all_timers_zero) {
+        for (int y = 0; y < LED_HEIGHT; y++) {
+            for (int x = 0; x < LED_WIDTH; x++) {
                 if (led_states[y][x].timer == 0) {
                     led_states[y][x].targetColor = getRandomColor();
                     led_states[y][x].timer = FADE_DURATION;
+                } else {
+                    led_states[y][x].timer--;
+                    double ratio = static_cast<double>(led_states[y][x].timer) / FADE_DURATION;
+                    led_states[y][x].currentColor = led_states[y][x].targetColor * (1 - ratio) + led_states[y][x].currentColor * ratio;
                 }
-                double ratio = static_cast<double>(led_states[y][x].timer) / FADE_DURATION;
-                led_states[y][x].currentColor = led_states[y][x].targetColor * (1 - ratio) + led_states[y][x].currentColor * ratio;
-                led_states[y][x].timer--;
             }
         }
     }
