@@ -17,11 +17,17 @@
 #define FRAME_AVERAGE_COUNT 5
 #define DEBOUNCE_FRAMES 3
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
+#define RED_DURATION 300  // Duration for red pixels to stay red in frames (approx 10 seconds at 30 FPS)
 
 using namespace cv;
 using namespace std;
 
-void initialize_led_wall(Mat &led_wall, vector<vector<Scalar>> &led_colors) {
+struct PixelState {
+    Scalar color;
+    int timer;
+};
+
+void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) {
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
     int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
     int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
@@ -31,12 +37,12 @@ void initialize_led_wall(Mat &led_wall, vector<vector<Scalar>> &led_colors) {
         for (int x = 0; x < LED_WIDTH; x++) {
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
             rectangle(led_wall, led_rect, green_color, FILLED);
-            led_colors[y][x] = green_color;
+            led_states[y][x] = { green_color, 0 };
         }
     }
 }
 
-void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vector<Scalar>> &led_colors) {
+void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vector<PixelState>> &led_states) {
     Mat gray_prev, gray_current, diff;
     cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
     cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
@@ -46,13 +52,27 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vec
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             if (diff.at<uchar>(y, x) > 0) {
-                led_colors[y][x] = Scalar(0, 0, 255); // Red color
+                led_states[y][x].color = Scalar(0, 0, 255); // Red color
+                led_states[y][x].timer = RED_DURATION;
             }
         }
     }
 }
 
-void draw_led_wall(Mat &led_wall, const vector<vector<Scalar>> &led_colors) {
+void update_led_states(vector<vector<PixelState>> &led_states) {
+    for (int y = 0; y < LED_HEIGHT; y++) {
+        for (int x = 0; x < LED_WIDTH; x++) {
+            if (led_states[y][x].timer > 0) {
+                led_states[y][x].timer--;
+                if (led_states[y][x].timer == 0) {
+                    led_states[y][x].color = Scalar(0, 255, 0); // Green color
+                }
+            }
+        }
+    }
+}
+
+void draw_led_wall(Mat &led_wall, const vector<vector<PixelState>> &led_states) {
     int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
     int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
 
@@ -63,7 +83,7 @@ void draw_led_wall(Mat &led_wall, const vector<vector<Scalar>> &led_colors) {
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-            rectangle(led_wall, led_rect, led_colors[y][x], FILLED);
+            rectangle(led_wall, led_rect, led_states[y][x].color, FILLED);
         }
     }
 }
@@ -85,11 +105,11 @@ int main(int argc, char** argv) {
 
     Mat frame, prev_frame;
     cuda::GpuMat d_frame, d_resizedFrame;
-    vector<vector<Scalar>> led_colors(LED_HEIGHT, vector<Scalar>(LED_WIDTH, Scalar(0, 255, 0))); // Green color
+    vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), 0 })); // Green color with timer 0
 
     // Initialize the LED wall
     Mat led_wall;
-    initialize_led_wall(led_wall, led_colors);
+    initialize_led_wall(led_wall, led_states);
 
     while (true) {
         // Capture a new frame
@@ -106,14 +126,17 @@ int main(int argc, char** argv) {
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
-            detect_movement(prev_frame, frame, led_colors);
+            detect_movement(prev_frame, frame, led_states);
         }
 
         // Update the previous frame
         prev_frame = frame.clone();
 
+        // Update the LED states
+        update_led_states(led_states);
+
         // Draw the LED wall
-        draw_led_wall(led_wall, led_colors);
+        draw_led_wall(led_wall, led_states);
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
