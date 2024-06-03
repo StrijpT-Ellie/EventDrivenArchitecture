@@ -126,6 +126,9 @@ def update_frame(i):
 # Create animation
 ani = FuncAnimation(fig, update_frame, interval=50)
 
+# Ensure the animation variable persists
+animation = ani
+
 plt.show()
 
 # After the loop release the cap object

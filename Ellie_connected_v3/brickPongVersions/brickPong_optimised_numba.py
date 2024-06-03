@@ -7,14 +7,31 @@ import mediapipe as mp
 import math
 import time
 from datetime import datetime
+from numba import cuda, float32, int32
+import cProfile
 
-# Uncomment to visualize the array
-# import matplotlib.pyplot as plt
+@cuda.jit
+def move_particles(x, y, dx, dy, ax, ay, damping, width, height, lifespan):
+    i = cuda.grid(1)
+    if i < x.size:
+        dx[i] += ax[i]
+        dy[i] += ay[i]
+        dx[i] *= damping
+        dy[i] *= damping
 
-# Uncomment to visualize the array
-# def visualize_array(array):
-#     plt.imshow(array, cmap='gray', interpolation='nearest')
-#     plt.show()
+        next_x = x[i] + dx[i]
+        next_y = y[i] + dy[i]
+
+        if lifespan[i] > 0:
+            lifespan[i] -= 1
+
+        if next_x < 0 or next_x > width:
+            dx[i] *= -1
+        if next_y < 0 or next_y > height:
+            dy[i] *= -1
+
+        x[i] += dx[i]
+        y[i] += dy[i]
 
 class HandController:
     def __init__(self):
@@ -27,14 +44,15 @@ class HandController:
     def get_direction(self):
         direction = 'none'
         ret, frame = self.cap.read()
+        if not ret:
+            return direction
         frame = cv2.flip(frame, 1)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.hands.process(frame_rgb)
 
         if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
-
+            hand_landmarks = results.multi_hand_landmarks[0]
+            self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
             movement_threshold = 0.001
 
             if self.old_hand_landmarks is not None:
@@ -68,33 +86,6 @@ class Particle:
         self.damping = 0.98
         self.lifespan = lifespan
 
-    def move(self, width, height):
-        self.dx += self.ax
-        self.dy += self.ay
-        
-        self.dx *= self.damping
-        self.dy *= self.damping
-
-        next_x = self.x + self.dx
-        next_y = self.y + self.dy
-
-        if self.lifespan is not None:
-            self.lifespan -= 1
-
-        if next_x < 0 or next_x > width:
-            self.dx *= -1
-        if next_y < 0 or next_y > height:
-            self.dy *= -1
-
-        self.x += self.dx
-        self.y += self.dy
-
-    def update_params(self, speed, direction):
-        self.speed = speed
-        self.direction = direction
-        self.dx = speed * np.cos(np.radians(direction))
-        self.dy = speed * np.sin(np.radians(direction))
-
     def update_acceleration(self, ax, ay):
         self.ax = ax * self.damping
         self.ay = ay * self.damping
@@ -107,59 +98,54 @@ class ParticleEmitter:
         self.particles = []
         self.main_particle = main_particle
 
-    def generate_particle(self):
-        x = self.screen_width // 2
-        y = self.screen_height // 2
-        speed = random.randint(1, 10)
-        direction = random.randint(0, 360)
-        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        lifespan = 300
-        return Particle(x, y, speed, direction, color, lifespan)
+        self.x = np.zeros(num_particles, dtype=np.float32)
+        self.y = np.zeros(num_particles, dtype=np.float32)
+        self.dx = np.zeros(num_particles, dtype=np.float32)
+        self.dy = np.zeros(num_particles, dtype=np.float32)
+        self.ax = np.zeros(num_particles, dtype=np.float32)
+        self.ay = np.zeros(num_particles, dtype=np.float32)
+        self.lifespan = np.zeros(num_particles, dtype=np.int32)
+        self.colors = [(0, 0, 0)] * num_particles
+        self.damping = 0.98  # Adding the damping attribute
+
+    def generate_particle(self, idx):
+        self.x[idx] = self.screen_width // 2
+        self.y[idx] = self.screen_height // 2
+        self.dx[idx] = random.randint(1, 10)
+        self.dy[idx] = random.randint(1, 10)
+        self.ax[idx] = random.uniform(-1, 1)
+        self.ay[idx] = random.uniform(-1, 1)
+        self.lifespan[idx] = 300
+        self.colors[idx] = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
 
     def trigger(self):
-        if len(self.particles) < self.num_particles:
-            for _ in range(self.num_particles - len(self.particles)):
-                self.particles.append(self.generate_particle())
+        for i in range(self.num_particles):
+            self.generate_particle(i)
 
     def update(self, blocks):
-        blocks_to_remove = []
+        threads_per_block = 256
+        blocks_per_grid = (self.num_particles + (threads_per_block - 1)) // threads_per_block
+
+        move_particles[blocks_per_grid, threads_per_block](
+            self.x, self.y, self.dx, self.dy, self.ax, self.ay, self.damping, self.screen_width, self.screen_height, self.lifespan
+        )
+
         particles_to_remove = []
 
-        for particle in self.particles:
-            particle.move(self.screen_width, self.screen_height)
+        for i in range(self.num_particles):
+            if self.lifespan[i] <= 0 or self.x[i] < 0 or self.y[i] < 0 or self.x[i] > self.screen_width or self.y[i] > self.screen_height:
+                particles_to_remove.append(i)
 
-            if self.check_collision(particle, self.main_particle):
-                particle.dx *= -1
-                particle.dy *= -1
-
-            for block in blocks:
-                if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
-                    blocks_to_remove.append(block)
-                    particle.dx *= -1
-                    particle.dy *= -1
-                    break
-
-            if particle.x < 0 or particle.y < 0 or particle.x > self.screen_width or particle.y > self.screen_height:
-                particles_to_remove.append(particle)
-
-            if particle.lifespan <= 0:
-                particles_to_remove.append(particle)
-
-        for block in blocks_to_remove:
-            if block in blocks:
-                blocks.remove(block)
-
-        for particle in particles_to_remove:
-            if particle in self.particles:
-                self.particles.remove(particle)
+        for i in sorted(particles_to_remove, reverse=True):
+            self.generate_particle(i)
 
     def draw(self, screen):
-        for particle in self.particles:
-            pygame.draw.circle(screen, particle.color, (int(particle.x), int(particle.y)), 20)
-
-    def check_collision(self, particle1, particle2):
-        distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
-        return distance < 12
+        for i in range(self.num_particles):
+            color = self.colors[i]
+            if not isinstance(color, tuple) or len(color) != 3:
+                print(f"Invalid color at index {i}: {color}")
+                color = (255, 255, 255)  # Default to white
+            pygame.draw.circle(screen, color, (int(self.x[i]), int(self.y[i])), 20)
 
 class Block:
     def __init__(self, x, y, width, height, color):
@@ -194,12 +180,13 @@ class BlockEmitter:
 
     def update(self, particles):
         blocks_to_remove = []
+
         for block in self.blocks[:]:
-            for particle in particles:
-                if block.x < particle.x < block.x + block.width and block.y < particle.y < block.y + block.height:
+            for i in range(len(particles.x)):
+                if block.x < particles.x[i] < block.x + block.width and block.y < particles.y[i] < block.y + block.height:
                     blocks_to_remove.append(block)
-                    particle.dy *= -1
-                    particle.dx += random.uniform(-4, 10)
+                    particles.dy[i] *= -1
+                    particles.dx[i] += random.uniform(-4, 10)
                     break
 
         for block in blocks_to_remove:
@@ -269,16 +256,12 @@ class Game:
         self.hand_controller = HandController()
         self.moving_bar = MovingBar(self.width, self.height)
 
-        self.frame_rate = 5 #original rate 30
+        self.frame_rate = 30
         self.last_print_time = time.time()
-        self.print_interval = 0.5 #original was 1
+        self.print_interval = 1.0
 
         self.main_particle = Particle(width // 2, height // 2, speed * 2, direction, (255, 255, 255))
-        self.emitter = ParticleEmitter(self.width, self.height, 20, self.main_particle)
-
-        self.particles = [Particle(self.width // 2, self.height // 2, speed * 2, direction,
-                           (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), 300)
-                  for _ in range(num_particles)]
+        self.emitter = ParticleEmitter(self.width, self.height, num_particles, self.main_particle)
 
         self.output_arrays = []
         self.destroyed_bricks = 0
@@ -296,9 +279,6 @@ class Game:
         while running:
             self.screen.fill((0, 0, 0))
 
-            for particle in self.particles:
-                pygame.draw.circle(self.screen, (255, 255, 255), (int(particle.x), int(particle.y)), 20)
-
             self.emitter.draw(self.screen)
             self.moving_bar.update()
             self.moving_bar.draw(self.screen)
@@ -313,25 +293,15 @@ class Game:
             direction = self.hand_controller.get_direction()
             self.moving_bar.update_direction(direction)
 
-            for particle in self.particles:
-                particle.update_acceleration(0, 0.5)
-                particle.move(self.width, self.height)
-
-                if (self.moving_bar.x < particle.x < self.moving_bar.x + self.moving_bar.bar_width and
-                    self.moving_bar.y < particle.y < self.moving_bar.y + self.moving_bar.bar_height):
-                    particle.dy *= -2
-                    particle.dx += random.uniform(-4, 10)
-                    particle.y = self.moving_bar.y - 20
-                    particle.color = (255, 0, 0)
+            self.emitter.update(block_emitter.blocks)
+            self.emitter.draw(self.screen)
 
             destroyed_bricks_before = len(block_emitter.blocks)
-            block_emitter.update(self.particles)
+            block_emitter.update(self.emitter)
             block_emitter.draw(self.screen)
             destroyed_bricks_after = len(block_emitter.blocks)
 
             self.destroyed_bricks += destroyed_bricks_before - destroyed_bricks_after
-
-            self.emitter.update(block_emitter.blocks)
 
             if self.destroyed_bricks >= 20 and not self.emitter_triggered:
                 self.emitter.trigger()
@@ -347,7 +317,7 @@ class Game:
                 block_emitter.last_destroyed_time = None
 
             screen_array = pygame.surfarray.array3d(self.screen)
-            resized_array = cv2.resize(screen_array, (20, 20))
+            resized_array = cv2.resize(screen_array, (20, 20), interpolation=cv2.INTER_LINEAR)
             reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
             rotated_array = np.rot90(reduced_color_array, -1)
             flipped_array = np.fliplr(rotated_array)
@@ -361,14 +331,16 @@ class Game:
             pygame.display.flip()
             frame_counter += 1
 
-            # if frame_counter % N == 0:
-            #     threading.Thread(target=visualize_array, args=(flipped_array,)).start()
-
-        #self.moving_bar.close_log_file()
         self.moving_bar.clear_log_file()
         self.hand_controller.release()
         pygame.quit()
 
 if __name__ == "__main__":
-    game = Game(600, 600, 20, 1, 2, 10)
+    profiler = cProfile.Profile()
+    profiler.enable()
+    
+    game = Game(600, 600, 20, 1, 1000, 10)
     game.run()
+    
+    profiler.disable()
+    profiler.dump_stats('game_profile.prof')

@@ -1,14 +1,13 @@
-
 import threading
 import pygame
 import random
 import cv2
 import numpy as np
 import mediapipe as mp
-import cv2
 import math
 import matplotlib.pyplot as plt
 import time
+from numba import cuda, float32, int32
 
 def visualize_array(array):
     plt.imshow(array, cmap='gray', interpolation='nearest')
@@ -23,7 +22,7 @@ class HandController:
         self.old_hand_landmarks = None
 
     def get_direction(self):
-        direction = 'none'  
+        direction = 'none'
         ret, frame = self.cap.read()
         frame = cv2.flip(frame, 1)
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -43,7 +42,6 @@ class HandController:
                         direction = 'right' if dx > 0 else 'left'
                     else:
                         direction = 'down' if dy > 0 else 'up'
-                    #print(f"Hand movement: dx={dx}, dy={dy}, direction={direction}")  # Debug print
 
             self.old_hand_landmarks = hand_landmarks  # Update old_hand_landmarks
 
@@ -52,14 +50,13 @@ class HandController:
     def release(self):
         self.cap.release()
         self.hands.close()
-        
 
 class Particle:
     def __init__(self, x, y, speed, direction, color):
         self.x = x
         self.y = y
-        self.speed = speed 
-        self.color = color 
+        self.speed = speed
+        self.color = color
         self.direction = direction
         self.dx = random.choice([-speed, speed])
         self.dy = random.choice([-speed, speed])
@@ -96,7 +93,7 @@ class Particle:
     def update_acceleration(self, ax, ay):
         self.ax = ax * self.damping
         self.ay = ay * self.damping
-        
+
 class ParticleEmitter:
     def __init__(self, screen_width, screen_height, num_particles, main_particle):
         self.screen_width = screen_width
@@ -139,13 +136,12 @@ class ParticleEmitter:
 
     def draw(self, screen):
         for particle in self.particles:
-            pygame.draw.circle(screen, particle.color, (particle.x, particle.y), 20)
+            pygame.draw.circle(screen, particle.color, (int(particle.x), int(particle.y)), 20)
 
     def check_collision(self, particle1, particle2):
         # Check if two particles collide (simple collision detection based on distance)
         distance = math.sqrt((particle1.x - particle2.x)**2 + (particle1.y - particle2.y)**2)
         return distance < 12  # Modify this threshold as needed
-
 
 class Block:
     def __init__(self, x, y, width, height, color):
@@ -184,10 +180,16 @@ class BlockEmitter:
         for block in self.blocks:
             block.draw(screen)
 
+# CUDA kernel for updating particle acceleration
+@cuda.jit
+def update_particle_acceleration_kernel(dx, dy, ax, ay, damping):
+    idx = cuda.grid(1)
+    if idx < dx.size:
+        dx[idx] += ax[idx]
+        dy[idx] += ay[idx]
+        dx[idx] *= damping
+        dy[idx] *= damping
 
-
-
-     
 class Game:
     def __init__(self, width, height, grid_size, direction, num_particles, speed):
         pygame.init()
@@ -208,7 +210,6 @@ class Game:
         # Create the particle emitter with a reference to the main particle
         self.emitter = ParticleEmitter(self.width, self.height, 25, self.main_particle)
 
-
         # Define the particles attribute
         self.particles = [Particle(i % grid_size * (width // grid_size), 
                            i // grid_size * (height // grid_size), 
@@ -220,7 +221,6 @@ class Game:
         self.output_arrays = []
         
     def run(self):
-        
         running = True
         emitter = None
         block_emitter = BlockEmitter(self.width, self.height, 50)
@@ -249,19 +249,41 @@ class Game:
                         emitter = ParticleEmitter(self.width, self.height, 25, self.particles[0])  # Assuming the main particle is at index 0
                         emitter.trigger()
 
-
                     elif event.key == pygame.K_b:  # Press "b" to trigger the block emitter
                         block_emitter.trigger(25)  # Emit 25 blocks
 
-                   
-
             if self.mode == 'autopilot':
-                for particle in self.particles:
-                    particle.update_acceleration(random.uniform(-0.01, 0.01), random.uniform(-0.01, 0.01))  # Add random acceleration
+                # Prepare data for CUDA kernel
+                dx = np.array([p.dx for p in self.particles], dtype=np.float32)
+                dy = np.array([p.dy for p in self.particles], dtype=np.float32)
+                ax = np.array([p.ax for p in self.particles], dtype=np.float32)
+                ay = np.array([p.ay for p in self.particles], dtype=np.float32)
+                damping = np.float32(0.99)
+
+                # Transfer data to GPU
+                dx_gpu = cuda.to_device(dx)
+                dy_gpu = cuda.to_device(dy)
+                ax_gpu = cuda.to_device(ax)
+                ay_gpu = cuda.to_device(ay)
+
+                # Define CUDA kernel grid and block dimensions
+                threads_per_block = 256
+                blocks_per_grid = (dx.size + (threads_per_block - 1)) // threads_per_block
+
+                # Run CUDA kernel
+                update_particle_acceleration_kernel[blocks_per_grid, threads_per_block](dx_gpu, dy_gpu, ax_gpu, ay_gpu, damping)
+
+                # Transfer results back to CPU
+                dx = dx_gpu.copy_to_host()
+                dy = dy_gpu.copy_to_host()
+
+                # Update particles with new velocities
+                for i, particle in enumerate(self.particles):
+                    particle.dx = dx[i]
+                    particle.dy = dy[i]
                     particle.move(self.width, self.height)
             elif self.mode == 'manual':
                 direction = self.hand_controller.get_direction()
-                #print(f"Hand direction: {direction}")  # Debug print
                 move_factor = 50  # Adjust this value to change the movement distance
                 for particle in self.particles:
                     if direction == 'up':
@@ -278,7 +300,6 @@ class Game:
                         particle.x = min(self.width, particle.x + particle.speed * move_factor)
                     particle.move(self.width, self.height)  # Move the particle with the updated acceleration
                     particle.update_acceleration(0, 0)  # Reset acceleration to zero
-                
 
                 # Update and draw the blocks
                 block_emitter.update(self.particles)
@@ -291,13 +312,17 @@ class Game:
                 # Update particles with blocks
                 self.emitter.update(block_emitter.blocks)  # Pass the list of blocks to the particle emitter update method
 
-           
-
-        # Get the pixel values of the screen as a numpy array
+            # Get the pixel values of the screen as a numpy array
             screen_array = pygame.surfarray.array3d(self.screen)
 
-            # Resize the array to 20x20
-            resized_array = cv2.resize(screen_array, (20, 20))
+            # Resize the array to 20x20 using OpenCV with CUDA
+            if cv2.cuda.getCudaEnabledDeviceCount() > 0:
+                gpu_mat = cv2.cuda_GpuMat()
+                gpu_mat.upload(screen_array)
+                gpu_resized = cv2.cuda.resize(gpu_mat, (20, 20))
+                resized_array = gpu_resized.download()
+            else:
+                resized_array = cv2.resize(screen_array, (20, 20))
 
             # Reduce the color depth to 8-bit
             reduced_color_array = (resized_array / 32).astype(np.uint8) * 32
@@ -320,16 +345,9 @@ class Game:
             if frame_counter % N == 0:
                 threading.Thread(target=visualize_array, args=(reduced_color_array,)).start()
 
-
         self.hand_controller.release()
         pygame.quit()
-
-    #def get_output_arrays(self):
-    # Print the first 5 output arrays
-        #for array in self.output_arrays[:50]:
-            #print(array)
 
 if __name__ == "__main__":
     game = Game(600, 600, 20, 1, 50, 0.1)
     game.run()
-    game.get_output_arrays()
