@@ -38,11 +38,16 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vec
     absdiff(gray_prev, gray_current, diff);
     threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
+    int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
+    int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
+
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
-            int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
-            int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
+
+            // Ensure the ROI stays within image bounds
+            led_rect &= Rect(0, 0, diff.cols, diff.rows);
+
             Mat roi = diff(led_rect);
             movement_map[y][x] = countNonZero(roi) > 0;
         }
