@@ -1,4 +1,4 @@
-//g++ -o hand_movement_detector_2 hand_movement_detector_2.cpp `pkg-config --cflags --libs opencv4` -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_cudaimgproc -lopencv_cudabgsegm -lopencv_cudaarithm
+//g++ -o hand_movement_detector_2 hand_movement_detector_2.cpp `pkg-config --cflags --libs opencv4` -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_cudaimgproc -lopencv_cudabgsegm -lopencv_cudafilters -lopencv_cudaarithm
 
 
 #include <opencv2/opencv.hpp>
@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 
     Mat frame;
     GpuMat d_frame, d_fg_mask, d_fg_mask_cleaned;
+    Mat fg_mask_cleaned;
 
     while (true) {
         cap >> frame;
@@ -40,9 +41,7 @@ int main(int argc, char** argv)
 
         // Remove noise by applying morphological operations on CPU
         cuda::threshold(d_fg_mask, d_fg_mask_cleaned, 127, 255, THRESH_BINARY);
-        d_fg_mask_cleaned.download(d_fg_mask_cleaned); // Download to CPU for morphology operations
-        Mat fg_mask_cleaned;
-        d_fg_mask_cleaned.download(fg_mask_cleaned);
+        d_fg_mask_cleaned.download(fg_mask_cleaned); // Download to CPU for morphology operations
         morphologyEx(fg_mask_cleaned, fg_mask_cleaned, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(5, 5)));
 
         // Detect and draw contours
