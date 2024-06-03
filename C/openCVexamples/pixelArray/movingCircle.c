@@ -27,7 +27,7 @@ void initialize_led_wall(Mat &led_wall) {
 void initialize_floating_circle(FloatingCircle &circle) {
     circle.position = Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
     circle.velocity = Point2f(3, 3);  // Velocity of the circle
-    circle.radius = 10;
+    circle.radius = 20;
     circle.color = Scalar(0, 0, 255);  // Red color
 }
 
@@ -107,7 +107,19 @@ void draw_led_wall(Mat &led_wall, const vector<vector<bool>> &movement_map, cons
     }
 
     // Draw the floating circle
-    cv::circle(led_wall, circle.position, circle.radius, circle.color, FILLED);
+    int circle_size = 2 * circle.radius / led_size_x;
+    int cx = circle.position.x / led_size_x;
+    int cy = circle.position.y / led_size_y;
+    for (int y = -circle_size; y <= circle_size; y++) {
+        for (int x = -circle_size; x <= circle_size; x++) {
+            if (cx + x >= 0 && cx + x < LED_WIDTH && cy + y >= 0 && cy + y < LED_HEIGHT) {
+                if (x * x + y * y <= circle_size * circle_size) {
+                    Rect led_rect((cx + x) * (led_size_x + LED_SPACING), (cy + y) * (led_size_y + LED_SPACING), led_size_x, led_size_y);
+                    rectangle(led_wall, led_rect, circle.color, FILLED);
+                }
+            }
+        }
+    }
 }
 
 int main(int argc, char** argv) {
@@ -143,7 +155,7 @@ int main(int argc, char** argv) {
         }
 
         // Resize the frame to match the LED PCB wall resolution
-        resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
+        resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
