@@ -34,8 +34,8 @@ void initialize_led_wall(Mat &led_wall) {
 
 void initialize_floating_ball(FloatingBall &ball) {
     ball.position = Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
-    ball.velocity = Point2f(3, 3);  // Velocity of the ball
-    ball.radius = 10;
+    ball.velocity = Point2f(6, 6);  // Velocity of the ball
+    ball.radius = 20;
     ball.color = Scalar(0, 0, 255);  // Red color
 }
 
@@ -87,7 +87,7 @@ void update_bar(Bar &bar, int movement_intensity) {
     if (movement_intensity > 0) {
         bar.position.x += movement_intensity / 500.0; // Adjust the scaling factor as needed
     } else {
-        bar.position.x -= 1; // Return to the left slowly
+        bar.position.x -= 10; // Return to the left slowly
     }
 
     // Clamp the bar's position within the screen bounds
