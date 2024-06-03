@@ -66,8 +66,8 @@ void draw_pixels(Mat &led_wall, const vector<Pixel> &pixels) {
 }
 
 int main(int argc, char** argv) {
-    // Open the default camera
-    VideoCapture cap(0);
+    // Open the default camera with V4L2 backend
+    VideoCapture cap(CAP_V4L2);
     if (!cap.isOpened()) {
         printf("Error: Could not open camera\n");
         return -1;
