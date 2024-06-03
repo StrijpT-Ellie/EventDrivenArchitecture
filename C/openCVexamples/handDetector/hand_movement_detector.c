@@ -1,11 +1,7 @@
-//g++ -o hand_movement_detector hand_movement_detector.cpp `pkg-config --cflags --libs opencv4` -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_cudaimgproc -lopencv_cudabgsegm -lopencv_cudafilters
-
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudabgsegm.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include <opencv2/cudaoptflow.hpp>
 #include <iostream>
 
 using namespace cv;
@@ -43,12 +39,8 @@ int main(int argc, char** argv)
         d_fg_mask.download(fg_mask);
 
         // Remove noise by applying morphological operations
-        cuda::GpuMat d_fg_mask_cleaned;
-        cuda::threshold(d_fg_mask, d_fg_mask_cleaned, 127, 255, THRESH_BINARY);
-        Ptr<cuda::Filter> filter = cuda::createMorphologyFilter(MORPH_OPEN, d_fg_mask_cleaned.type(), getStructuringElement(MORPH_RECT, Size(5, 5)));
-        filter->apply(d_fg_mask_cleaned, d_fg_mask_cleaned);
-
-        d_fg_mask_cleaned.download(fg_mask_cpu);
+        cv::threshold(fg_mask, fg_mask_cpu, 127, 255, THRESH_BINARY);
+        cv::morphologyEx(fg_mask_cpu, fg_mask_cpu, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(5, 5)));
 
         // Detect and draw contours
         detectAndDrawContours(frame, fg_mask_cpu);
