@@ -88,11 +88,11 @@ void update_floating_ball(FloatingBall &ball, const Bar &bar) {
 }
 
 void update_bar(Bar &bar, int left_movement_intensity, int right_movement_intensity) {
-    if (left_movement_intensity > 0) {
-        bar.position.x += left_movement_intensity / 500.0; // Move right with left movement intensity
-    }
     if (right_movement_intensity > 0) {
-        bar.position.x -= right_movement_intensity / 500.0; // Move left with right movement intensity
+        bar.position.x -= right_movement_intensity / 500.0; // Move left
+    }
+    if (left_movement_intensity > 0) {
+        bar.position.x += left_movement_intensity / 500.0; // Move right
     }
 
     // Clamp the bar's position within the screen bounds
@@ -145,6 +145,9 @@ int main(int argc, char** argv) {
             printf("Error: No captured frame\n");
             break;
         }
+
+        // Flip the frame horizontally to correct the mirrored view
+        flip(frame, frame, 1);
 
         // Resize the frame to match the LED PCB wall resolution
         resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
