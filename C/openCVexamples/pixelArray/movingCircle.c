@@ -102,7 +102,7 @@ void draw_led_wall(Mat &led_wall, const vector<vector<bool>> &movement_map, cons
     }
 
     // Draw the floating circle
-    circle(led_wall, circle.position, circle.radius, circle.color, FILLED);
+    cv::circle(led_wall, circle.position, circle.radius, circle.color, FILLED);
 }
 
 int main(int argc, char** argv) {
@@ -121,13 +121,13 @@ int main(int argc, char** argv) {
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     Mat frame, prev_frame;
-    FloatingCircle circle;
+    FloatingCircle floating_circle;
     vector<vector<bool>> movement_map(LED_HEIGHT, vector<bool>(LED_WIDTH, false));
 
     // Initialize the LED wall and floating circle
     Mat led_wall;
     initialize_led_wall(led_wall);
-    initialize_floating_circle(circle);
+    initialize_floating_circle(floating_circle);
 
     while (true) {
         // Capture a new frame
@@ -149,10 +149,10 @@ int main(int argc, char** argv) {
         prev_frame = frame.clone();
 
         // Update the floating circle
-        update_floating_circle(circle, movement_map);
+        update_floating_circle(floating_circle, movement_map);
 
         // Draw the LED wall
-        draw_led_wall(led_wall, movement_map, circle);
+        draw_led_wall(led_wall, movement_map, floating_circle);
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
