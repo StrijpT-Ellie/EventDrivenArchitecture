@@ -1,11 +1,10 @@
-//g++ -o hand_movement_detector_2 hand_movement_detector_2.cpp `pkg-config --cflags --libs opencv4` -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_cudaimgproc -lopencv_cudabgsegm -lopencv_cudafilters -lopencv_cudaarithm
+//g++ -o hand_movement_detector_2 hand_movement_detector_2.cpp `pkg-config --cflags --libs opencv4` -lopencv_core -lopencv_highgui -lopencv_videoio -lopencv_cudaimgproc -lopencv_cudabgsegm -lopencv_cudaarithm
 
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <opencv2/cudabgsegm.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include <opencv2/cudaoptflow.hpp>
 #include <iostream>
 
 using namespace cv;
@@ -39,14 +38,12 @@ int main(int argc, char** argv)
         // Apply background subtraction
         bg_subtractor->apply(d_frame, d_fg_mask);
 
-        // Remove noise by applying morphological operations
+        // Remove noise by applying morphological operations on CPU
         cuda::threshold(d_fg_mask, d_fg_mask_cleaned, 127, 255, THRESH_BINARY);
-        Ptr<cuda::Filter> filter = cuda::createMorphologyFilter(MORPH_OPEN, d_fg_mask_cleaned.type(), getStructuringElement(MORPH_RECT, Size(5, 5)));
-        filter->apply(d_fg_mask_cleaned, d_fg_mask_cleaned);
-
-        // Download the result back to CPU
+        d_fg_mask_cleaned.download(d_fg_mask_cleaned); // Download to CPU for morphology operations
         Mat fg_mask_cleaned;
         d_fg_mask_cleaned.download(fg_mask_cleaned);
+        morphologyEx(fg_mask_cleaned, fg_mask_cleaned, MORPH_OPEN, getStructuringElement(MORPH_RECT, Size(5, 5)));
 
         // Detect and draw contours
         detectAndDrawContours(frame, fg_mask_cleaned);
