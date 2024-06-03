@@ -46,7 +46,7 @@ void initialize_bar(Bar &bar) {
     bar.color = Scalar(255, 0, 0);  // Blue color
 }
 
-void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vector<bool>> &movement_map, int &movement_intensity) {
+void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &movement_intensity) {
     Mat gray_prev, gray_current, diff;
     cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
     cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
@@ -77,19 +77,17 @@ void update_floating_ball(FloatingBall &ball, const Bar &bar) {
         ball.position.x - ball.radius < bar_rect.x + bar_rect.width &&
         ball.position.y + ball.radius > bar_rect.y &&
         ball.position.y - ball.radius < bar_rect.y + bar_rect.height) {
-        if (abs(ball.position.x - (bar_rect.x + bar_rect.width / 2)) > abs(ball.position.y - (bar_rect.y + bar_rect.height / 2))) {
-            ball.velocity.x = -ball.velocity.x;
-        } else {
-            ball.velocity.y = -ball.velocity.y;
+        if (ball.position.y + ball.radius >= bar_rect.y && ball.position.y - ball.radius < bar_rect.y) {
+            ball.velocity.y = -abs(ball.velocity.y); // Bounce up
         }
     }
 }
 
 void update_bar(Bar &bar, int movement_intensity) {
     if (movement_intensity > 0) {
-        bar.position.x += movement_intensity / 100.0; // Adjust the scaling factor as needed
+        bar.position.x += movement_intensity / 500.0; // Adjust the scaling factor as needed
     } else {
-        bar.position.x -= 5; // Return to the left slowly
+        bar.position.x -= 1; // Return to the left slowly
     }
 
     // Clamp the bar's position within the screen bounds
@@ -126,7 +124,6 @@ int main(int argc, char** argv) {
     Mat frame, prev_frame;
     FloatingBall floating_ball;
     Bar bar;
-    vector<vector<bool>> movement_map(LED_HEIGHT, vector<bool>(LED_WIDTH, false));
     int movement_intensity = 0;
 
     // Initialize the LED wall, floating ball, and bar
@@ -148,7 +145,7 @@ int main(int argc, char** argv) {
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
-            detect_movement(prev_frame, frame, movement_map, movement_intensity);
+            detect_movement(prev_frame, frame, movement_intensity);
         }
 
         // Update the previous frame
