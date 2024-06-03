@@ -31,13 +31,18 @@ struct PixelState {
     bool isRed;
 };
 
-void quantize_colors(cv::Mat &image) {
-    vector<Mat> channels;
-    split(image, channels);
-    for (int i = 0; i < 3; i++) {
-        threshold(channels[i], channels[i], 127, 255, THRESH_BINARY);
+void initialize_led_wall(Mat &led_wall) {
+    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+    int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
+    int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
+    Scalar green_color(0, 255, 0); // Green color
+
+    for (int y = 0; y < LED_HEIGHT; y++) {
+        for (int x = 0; x < LED_WIDTH; x++) {
+            Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
+            rectangle(led_wall, led_rect, green_color, FILLED);
+        }
     }
-    merge(channels, image);
 }
 
 void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floating_pixels, vector<vector<PixelState>> &pixel_states) {
@@ -149,15 +154,19 @@ void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &
     }
 }
 
-void draw_led_wall(Mat &led_wall, const Mat &frame, const vector<FloatingPixel> &floating_pixels, const vector<vector<int>> &accumulated_pixels) {
+void draw_led_wall(Mat &led_wall, const vector<FloatingPixel> &floating_pixels, const vector<vector<int>> &accumulated_pixels) {
     int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
     int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
 
-    // Draw the "LEDs" with spacing
+    // Clear the LED wall
+    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+    Scalar green_color(0, 255, 0); // Green color
+
+    // Draw the "LEDs" with spacing and set initial color to green
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-            rectangle(led_wall, led_rect, Scalar(frame.at<Vec3b>(y, x)[0], frame.at<Vec3b>(y, x)[1], frame.at<Vec3b>(y, x)[2]), FILLED);
+            rectangle(led_wall, led_rect, green_color, FILLED);
         }
     }
 
@@ -202,6 +211,10 @@ int main(int argc, char** argv) {
     deque<Mat> frame_buffer;
     srand(time(0));
 
+    // Initialize the LED wall
+    Mat led_wall;
+    initialize_led_wall(led_wall);
+
     while (true) {
         // Capture a new frame
         cap >> frame;
@@ -231,20 +244,14 @@ int main(int argc, char** argv) {
         // Download the resized frame back to the CPU
         d_resizedFrame.download(avg_frame);
 
-        // Quantize the colors
-        quantize_colors(avg_frame);
-
         // Detect red pixels and add floating effect
         detect_and_float_red_pixels(avg_frame, floating_pixels, pixel_states);
 
         // Update positions of floating pixels
         update_floating_pixels(floating_pixels, Size(LED_WIDTH, LED_HEIGHT), accumulated_pixels, settle_timers);
 
-        // Create a new image to represent the LED wall with spacing
-        Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3, Scalar(0, 0, 0));
-
         // Draw the LED wall and floating pixels
-        draw_led_wall(led_wall, avg_frame, floating_pixels, accumulated_pixels);
+        draw_led_wall(led_wall, floating_pixels, accumulated_pixels);
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
