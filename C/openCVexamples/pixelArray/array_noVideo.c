@@ -11,13 +11,13 @@
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
 #define LED_SPACING 5
-#define SETTLE_DURATION 300  // in frames, assuming 30 FPS this would be ~10 seconds
+#define SETTLE_DURATION 10  // in frames, assuming 30 FPS this would be ~10 seconds
 #define MAX_NEW_FLOATING_PIXELS 10
 #define MAX_ACCUMULATION_LINES 20
 #define FRAME_AVERAGE_COUNT 5
 #define DEBOUNCE_FRAMES 3
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
-#define RED_DURATION 300  // Duration for red pixels to stay red in frames (approx 10 seconds at 30 FPS)
+#define RED_DURATION 10  // Duration for red pixels to stay red in frames (approx 10 seconds at 30 FPS)
 
 using namespace cv;
 using namespace std;
