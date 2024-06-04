@@ -2,6 +2,8 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -9,12 +11,19 @@
 #define DISPLAY_HEIGHT 480
 #define LED_SPACING 5
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
+#define NUM_FOOD_PARTICLES 10  // Number of food particles
 
 using namespace cv;
 using namespace std;
 
-struct FloatingBall {
+struct Particle {
     Point2f position;
+    int radius;
+    Scalar color;
+};
+
+struct Snake {
+    vector<Point2f> body;
     Point2f velocity;
     int radius;
     Scalar color;
@@ -24,11 +33,22 @@ void initialize_led_wall(Mat &led_wall) {
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
 }
 
-void initialize_floating_ball(FloatingBall &ball) {
-    ball.position = Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
-    ball.velocity = Point2f(3, 0);  // Initial velocity to the right
-    ball.radius = 10;
-    ball.color = Scalar(0, 0, 255);  // Red color
+void initialize_snake(Snake &snake) {
+    snake.body.push_back(Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2));
+    snake.velocity = Point2f(3, 0);  // Initial velocity to the right
+    snake.radius = 10;
+    snake.color = Scalar(0, 0, 255);  // Red color
+}
+
+void initialize_food(vector<Particle> &food_particles) {
+    srand(time(0));
+    for (int i = 0; i < NUM_FOOD_PARTICLES; ++i) {
+        Particle food;
+        food.position = Point2f(rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT);
+        food.radius = 5;
+        food.color = Scalar(0, 255, 0);  // Green color
+        food_particles.push_back(food);
+    }
 }
 
 void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &left_movement_intensity, int &right_movement_intensity) {
@@ -45,47 +65,78 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &left_
     right_movement_intensity = countNonZero(right_half);
 }
 
-void update_floating_ball(FloatingBall &ball, int left_movement_intensity, int right_movement_intensity) {
+void update_snake(Snake &snake, int left_movement_intensity, int right_movement_intensity, const vector<Particle> &food_particles) {
     // Adjust direction based on movement intensity
     if (right_movement_intensity > left_movement_intensity) {
         // Turn left
-        float angle = -CV_PI / 18;  // Increase turn angle in radians
-        float new_vx = ball.velocity.x * cos(angle) - ball.velocity.y * sin(angle);
-        float new_vy = ball.velocity.x * sin(angle) + ball.velocity.y * cos(angle);
-        ball.velocity.x = new_vx;
-        ball.velocity.y = new_vy;
+        float angle = -CV_PI / 18;  // Turn angle in radians
+        float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
+        float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
+        snake.velocity.x = new_vx;
+        snake.velocity.y = new_vy;
     }
     if (left_movement_intensity > right_movement_intensity) {
         // Turn right
-        float angle = CV_PI / 18;  // Increase turn angle in radians
-        float new_vx = ball.velocity.x * cos(angle) - ball.velocity.y * sin(angle);
-        float new_vy = ball.velocity.x * sin(angle) + ball.velocity.y * cos(angle);
-        ball.velocity.x = new_vx;
-        ball.velocity.y = new_vy;
+        float angle = CV_PI / 18;  // Turn angle in radians
+        float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
+        float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
+        snake.velocity.x = new_vx;
+        snake.velocity.y = new_vy;
     }
 
     // Update position
-    ball.position += ball.velocity;
-
+    Point2f new_head_position = snake.body[0] + snake.velocity;
+    
     // Check for collisions with the edges of the display
-    if (ball.position.x - ball.radius < 0) {
-        ball.velocity.x = abs(ball.velocity.x); // Bounce right
-    } else if (ball.position.x + ball.radius > DISPLAY_WIDTH) {
-        ball.velocity.x = -abs(ball.velocity.x); // Bounce left
+    if (new_head_position.x - snake.radius < 0) {
+        new_head_position.x = snake.radius;
+        snake.velocity.x = abs(snake.velocity.x); // Bounce right
+    } else if (new_head_position.x + snake.radius > DISPLAY_WIDTH) {
+        new_head_position.x = DISPLAY_WIDTH - snake.radius;
+        snake.velocity.x = -abs(snake.velocity.x); // Bounce left
     }
-    if (ball.position.y - ball.radius < 0) {
-        ball.velocity.y = abs(ball.velocity.y); // Bounce down
-    } else if (ball.position.y + ball.radius > DISPLAY_HEIGHT) {
-        ball.velocity.y = -abs(ball.velocity.y); // Bounce up
+    if (new_head_position.y - snake.radius < 0) {
+        new_head_position.y = snake.radius;
+        snake.velocity.y = abs(snake.velocity.y); // Bounce down
+    } else if (new_head_position.y + snake.radius > DISPLAY_HEIGHT) {
+        new_head_position.y = DISPLAY_HEIGHT - snake.radius;
+        snake.velocity.y = -abs(snake.velocity.y); // Bounce up
+    }
+
+    // Add new head position
+    snake.body.insert(snake.body.begin(), new_head_position);
+
+    // Check for food collisions
+    for (auto it = food_particles.begin(); it != food_particles.end(); ) {
+        if (norm(snake.body[0] - it->position) < (snake.radius + it->radius)) {
+            // Eat the food particle
+            it = food_particles.erase(it);
+            // Add new segment to the snake
+            snake.body.push_back(snake.body.back());
+        } else {
+            ++it;
+        }
+    }
+
+    // Remove the last segment if no food was eaten
+    if (snake.body.size() > 1 && norm(snake.body[0] - snake.body[1]) > (snake.radius * 2)) {
+        snake.body.pop_back();
     }
 }
 
-void draw_led_wall(Mat &led_wall, const FloatingBall &ball) {
+void draw_led_wall(Mat &led_wall, const Snake &snake, const vector<Particle> &food_particles) {
     // Clear the LED wall
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
 
-    // Draw the floating ball
-    cv::circle(led_wall, ball.position, ball.radius, ball.color, FILLED);
+    // Draw the snake
+    for (const auto &segment : snake.body) {
+        cv::circle(led_wall, segment, snake.radius, snake.color, FILLED);
+    }
+
+    // Draw the food particles
+    for (const auto &food : food_particles) {
+        cv::circle(led_wall, food.position, food.radius, food.color, FILLED);
+    }
 }
 
 int main(int argc, char** argv) {
@@ -104,14 +155,16 @@ int main(int argc, char** argv) {
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     Mat frame, prev_frame;
-    FloatingBall floating_ball;
+    Snake snake;
+    vector<Particle> food_particles;
     int left_movement_intensity = 0;
     int right_movement_intensity = 0;
 
-    // Initialize the LED wall and floating ball
+    // Initialize the LED wall, snake, and food particles
     Mat led_wall;
     initialize_led_wall(led_wall);
-    initialize_floating_ball(floating_ball);
+    initialize_snake(snake);
+    initialize_food(food_particles);
 
     while (true) {
         // Capture a new frame
@@ -135,11 +188,11 @@ int main(int argc, char** argv) {
         // Update the previous frame
         prev_frame = frame.clone();
 
-        // Update the floating ball based on movement intensity
-        update_floating_ball(floating_ball, left_movement_intensity, right_movement_intensity);
+        // Update the snake based on movement intensity and check for food collisions
+        update_snake(snake, left_movement_intensity, right_movement_intensity, food_particles);
 
         // Draw the LED wall
-        draw_led_wall(led_wall, floating_ball);
+        draw_led_wall(led_wall, snake, food_particles);
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
