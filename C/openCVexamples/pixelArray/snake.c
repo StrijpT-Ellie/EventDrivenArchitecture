@@ -47,17 +47,17 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &left_
 
 void update_floating_ball(FloatingBall &ball, int left_movement_intensity, int right_movement_intensity) {
     // Adjust direction based on movement intensity
-    if (right_movement_intensity > 0) {
+    if (right_movement_intensity > left_movement_intensity) {
         // Turn left
-        float angle = -CV_PI / 30;  // Turn angle in radians
+        float angle = -CV_PI / 18;  // Increase turn angle in radians
         float new_vx = ball.velocity.x * cos(angle) - ball.velocity.y * sin(angle);
         float new_vy = ball.velocity.x * sin(angle) + ball.velocity.y * cos(angle);
         ball.velocity.x = new_vx;
         ball.velocity.y = new_vy;
     }
-    if (left_movement_intensity > 0) {
+    if (left_movement_intensity > right_movement_intensity) {
         // Turn right
-        float angle = CV_PI / 30;  // Turn angle in radians
+        float angle = CV_PI / 18;  // Increase turn angle in radians
         float new_vx = ball.velocity.x * cos(angle) - ball.velocity.y * sin(angle);
         float new_vy = ball.velocity.x * sin(angle) + ball.velocity.y * cos(angle);
         ball.velocity.x = new_vx;
