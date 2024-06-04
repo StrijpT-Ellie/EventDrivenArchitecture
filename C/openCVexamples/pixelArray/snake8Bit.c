@@ -10,7 +10,6 @@
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
 #define NUM_FOOD_PARTICLES 10  // Number of food particles
 #define GRID_SIZE 20  // Size of each grid cell
-#define SNAKE_SPEED 10  // Number of frames between each movement
 
 using namespace cv;
 using namespace std;
@@ -72,7 +71,7 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &left_
 
 void update_snake(Snake &snake, int left_movement_intensity, int right_movement_intensity, vector<Particle> &food_particles) {
     // Adjust direction based on movement intensity
-    if (right_movement_intensity > MOVEMENT_THRESHOLD) {
+    if (right_movement_intensity > left_movement_intensity) {
         // Turn left
         float angle = -CV_PI / 2;  // Turn angle in radians (90 degrees)
         float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
@@ -80,7 +79,7 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
         snake.velocity.x = new_vx;
         snake.velocity.y = new_vy;
     }
-    if (left_movement_intensity > MOVEMENT_THRESHOLD) {
+    if (left_movement_intensity > right_movement_intensity) {
         // Turn right
         float angle = CV_PI / 2;  // Turn angle in radians (90 degrees)
         float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
@@ -174,7 +173,6 @@ int main(int argc, char** argv) {
     vector<Particle> food_particles;
     int left_movement_intensity = 0;
     int right_movement_intensity = 0;
-    int frame_count = 0;  // To control the speed of the snake
 
     // Initialize the LED wall, snake, and food particles
     Mat led_wall;
@@ -204,12 +202,8 @@ int main(int argc, char** argv) {
         // Update the previous frame
         prev_frame = frame.clone();
 
-        // Update the snake only every SNAKE_SPEED frames
-        if (frame_count % SNAKE_SPEED == 0) {
-            // Update the snake based on movement intensity and check for food collisions
-            update_snake(snake, left_movement_intensity, right_movement_intensity, food_particles);
-        }
-        frame_count++;
+        // Update the snake based on movement intensity and check for food collisions
+        update_snake(snake, left_movement_intensity, right_movement_intensity, food_particles);
 
         // Draw the LED wall
         draw_led_wall(led_wall, snake, food_particles);
