@@ -112,14 +112,13 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
             // Eat the food particle
             it = food_particles.erase(it);
             // Add new segment to the snake
-            snake.body.push_back(snake.body.back());
         } else {
             ++it;
         }
     }
 
-    // Remove the last segment if no food was eaten
-    if (snake.body.size() > 1 && norm(snake.body[0] - snake.body[1]) > (snake.radius * 2)) {
+    // Ensure the snake's body does not leave a continuous trace by keeping it the same length or growing it
+    if (food_particles.empty() || (norm(snake.body[0] - snake.body.back()) > (snake.radius * 2))) {
         snake.body.pop_back();
     }
 }
