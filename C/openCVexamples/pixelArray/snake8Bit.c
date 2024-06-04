@@ -33,8 +33,8 @@ void initialize_led_wall(Mat &led_wall) {
 }
 
 void initialize_snake(Snake &snake) {
-    int initial_x = (DISPLAY_WIDTH / GRID_SIZE / 2) * GRID_SIZE;
-    int initial_y = (DISPLAY_HEIGHT / GRID_SIZE / 2) * GRID_SIZE;
+    int initial_x = (DISPLAY_WIDTH / GRID_SIZE / 2) * GRID_SIZE + GRID_SIZE / 2;
+    int initial_y = (DISPLAY_HEIGHT / GRID_SIZE / 2) * GRID_SIZE + GRID_SIZE / 2;
     snake.body.push_back(Point2f(initial_x, initial_y));
     snake.velocity = Point2f(GRID_SIZE, 0);  // Initial velocity to the right
     snake.radius = GRID_SIZE / 2;
@@ -92,19 +92,19 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
     Point2f new_head_position = snake.body[0] + snake.velocity;
     
     // Ensure the new head position is within grid boundaries
-    new_head_position.x = round(new_head_position.x / GRID_SIZE) * GRID_SIZE;
-    new_head_position.y = round(new_head_position.y / GRID_SIZE) * GRID_SIZE;
+    new_head_position.x = round(new_head_position.x / GRID_SIZE) * GRID_SIZE + GRID_SIZE / 2;
+    new_head_position.y = round(new_head_position.y / GRID_SIZE) * GRID_SIZE + GRID_SIZE / 2;
 
     // Check for collisions with the edges of the display
-    if (new_head_position.x < 0) {
-        new_head_position.x = 0;
-    } else if (new_head_position.x >= DISPLAY_WIDTH) {
-        new_head_position.x = DISPLAY_WIDTH - GRID_SIZE;
+    if (new_head_position.x < GRID_SIZE / 2) {
+        new_head_position.x = GRID_SIZE / 2;
+    } else if (new_head_position.x >= DISPLAY_WIDTH - GRID_SIZE / 2) {
+        new_head_position.x = DISPLAY_WIDTH - GRID_SIZE / 2;
     }
-    if (new_head_position.y < 0) {
-        new_head_position.y = 0;
-    } else if (new_head_position.y >= DISPLAY_HEIGHT) {
-        new_head_position.y = DISPLAY_HEIGHT - GRID_SIZE;
+    if (new_head_position.y < GRID_SIZE / 2) {
+        new_head_position.y = GRID_SIZE / 2;
+    } else if (new_head_position.y >= DISPLAY_HEIGHT - GRID_SIZE / 2) {
+        new_head_position.y = DISPLAY_HEIGHT - GRID_SIZE / 2;
     }
 
     // Add new head position
