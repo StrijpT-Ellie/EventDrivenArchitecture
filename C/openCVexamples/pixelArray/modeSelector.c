@@ -3,7 +3,6 @@
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <vector>
-#include <ctime>
 #include <deque>
 
 #define LED_WIDTH 20
