@@ -19,6 +19,7 @@
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
 #define RED_DURATION 10  // Duration for red pixels to stay red in frames (approx 10 seconds at 30 FPS)
 #define MOVEMENT_DETECTION_DURATION 180  // Duration to detect continuous movement (6 seconds at 30 FPS)
+#define MIN_ACTIVE_PIXELS 10  // Minimum number of active pixels to consider significant movement
 
 using namespace cv;
 using namespace std;
@@ -67,15 +68,16 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vec
         }
     }
 
-    if (left_movement > 0) {
+    if (left_movement > MIN_ACTIVE_PIXELS) {
         left_counter++;
-        right_counter = 0;
-    } else if (right_movement > 0) {
-        right_counter++;
-        left_counter = 0;
     } else {
-        left_counter = 0;
-        right_counter = 0;
+        left_counter = max(0, left_counter - 1);
+    }
+
+    if (right_movement > MIN_ACTIVE_PIXELS) {
+        right_counter++;
+    } else {
+        right_counter = max(0, right_counter - 1);
     }
 }
 
