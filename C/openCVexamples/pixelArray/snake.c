@@ -65,7 +65,7 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &left_
     right_movement_intensity = countNonZero(right_half);
 }
 
-void update_snake(Snake &snake, int left_movement_intensity, int right_movement_intensity, const vector<Particle> &food_particles) {
+void update_snake(Snake &snake, int left_movement_intensity, int right_movement_intensity, vector<Particle> &food_particles) {
     // Adjust direction based on movement intensity
     if (right_movement_intensity > left_movement_intensity) {
         // Turn left
