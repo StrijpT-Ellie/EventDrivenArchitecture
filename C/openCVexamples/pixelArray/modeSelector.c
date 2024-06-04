@@ -138,6 +138,7 @@ int main(int argc, char** argv) {
 
     int left_counter = 0;
     int right_counter = 0;
+    int frame_count = 0;
 
     while (true) {
         // Capture a new frame
@@ -169,6 +170,12 @@ int main(int argc, char** argv) {
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
+
+        // Print counters every second (15 frames)
+        frame_count++;
+        if (frame_count % 15 == 0) {
+            printf("Left counter: %d, Right counter: %d\n", left_counter, right_counter);
+        }
 
         // Check for mode selection
         if (left_counter >= MOVEMENT_DETECTION_DURATION) {
