@@ -5,11 +5,14 @@
 #include <cstdlib>
 #include <ctime>
 
-#define GRID_SIZE 20  // Size of each grid cell
+#define LED_WIDTH 20
+#define LED_HEIGHT 20
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
+#define LED_SPACING 5
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
 #define NUM_FOOD_PARTICLES 10  // Number of food particles
+#define GRID_SIZE 20  // Size of each grid cell
 
 using namespace cv;
 using namespace std;
@@ -32,16 +35,10 @@ void initialize_led_wall(Mat &led_wall) {
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
 }
 
-Point2f quantize_position(Point2f position) {
-    int x = (int)(position.x / GRID_SIZE) * GRID_SIZE + GRID_SIZE / 2;
-    int y = (int)(position.y / GRID_SIZE) * GRID_SIZE + GRID_SIZE / 2;
-    return Point2f(x, y);
-}
-
 void initialize_snake(Snake &snake) {
-    snake.body.push_back(quantize_position(Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2)));
-    snake.velocity = Point2f(GRID_SIZE, 0);  // Initial velocity to the right, aligned with grid
-    snake.radius = GRID_SIZE / 2;
+    snake.body.push_back(Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2));
+    snake.velocity = Point2f(3, 0);  // Initial velocity to the right
+    snake.radius = 10;
     snake.color = Scalar(0, 0, 255);  // Red color
     snake.segments_to_add = 0;  // Initialize with no segments to add
 }
@@ -50,8 +47,8 @@ void initialize_food(vector<Particle> &food_particles) {
     srand(time(0));
     for (int i = 0; i < NUM_FOOD_PARTICLES; ++i) {
         Particle food;
-        food.position = quantize_position(Point2f(rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT));
-        food.radius = GRID_SIZE / 2;
+        food.position = Point2f(rand() % DISPLAY_WIDTH, rand() % DISPLAY_HEIGHT);
+        food.radius = 5;
         food.color = Scalar(0, 255, 0);  // Green color
         food_particles.push_back(food);
     }
@@ -75,7 +72,7 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
     // Adjust direction based on movement intensity
     if (right_movement_intensity > left_movement_intensity) {
         // Turn left
-        float angle = -CV_PI / 2;  // Turn angle 90 degrees left
+        float angle = -CV_PI / 18;  // Turn angle in radians
         float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
         float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
         snake.velocity.x = new_vx;
@@ -83,7 +80,7 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
     }
     if (left_movement_intensity > right_movement_intensity) {
         // Turn right
-        float angle = CV_PI / 2;  // Turn angle 90 degrees right
+        float angle = CV_PI / 18;  // Turn angle in radians
         float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
         float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
         snake.velocity.x = new_vx;
@@ -93,9 +90,6 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
     // Update position
     Point2f new_head_position = snake.body[0] + snake.velocity;
     
-    // Quantize new head position to align with the grid
-    new_head_position = quantize_position(new_head_position);
-
     // Check for collisions with the edges of the display
     if (new_head_position.x - snake.radius < 0) {
         new_head_position.x = snake.radius;
