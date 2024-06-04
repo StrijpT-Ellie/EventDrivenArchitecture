@@ -19,6 +19,8 @@
 #define RED_DURATION 10  // Duration for red pixels to stay red in frames (approx 10 seconds at 30 FPS)
 #define MOVEMENT_DETECTION_DURATION 180  // Duration to detect continuous movement (6 seconds at 30 FPS)
 #define MIN_ACTIVE_PIXELS 10  // Minimum number of active pixels to consider significant movement
+#define CHECK_INTERVAL 15  // Number of frames between checks
+#define REQUIRED_CONSECUTIVE_DETECTIONS 6  // Number of consecutive detections needed for mode selection
 
 using namespace cv;
 using namespace std;
@@ -138,6 +140,8 @@ int main(int argc, char** argv) {
     int left_counter = 0;
     int right_counter = 0;
     int frame_count = 0;
+    int left_detections = 0;
+    int right_detections = 0;
 
     while (true) {
         // Capture a new frame
@@ -170,19 +174,29 @@ int main(int argc, char** argv) {
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
 
-        // Print counters every second (15 frames)
+        // Print counters every CHECK_INTERVAL frames and check for continuous detections
         frame_count++;
-        if (frame_count % 15 == 0) {
+        if (frame_count % CHECK_INTERVAL == 0) {
             printf("Left counter: %d, Right counter: %d\n", left_counter, right_counter);
-        }
 
-        // Check for mode selection
-        if (left_counter >= MOVEMENT_DETECTION_DURATION) {
-            printf("Mode selected: 1\n");
-            break;
-        } else if (right_counter >= MOVEMENT_DETECTION_DURATION) {
-            printf("Mode selected: 2\n");
-            break;
+            if (left_counter >= CHECK_INTERVAL) {
+                left_detections++;
+                right_detections = 0;
+            } else if (right_counter >= CHECK_INTERVAL) {
+                right_detections++;
+                left_detections = 0;
+            } else {
+                left_detections = 0;
+                right_detections = 0;
+            }
+
+            if (left_detections >= REQUIRED_CONSECUTIVE_DETECTIONS) {
+                printf("Mode selected: 1\n");
+                break;
+            } else if (right_detections >= REQUIRED_CONSECUTIVE_DETECTIONS) {
+                printf("Mode selected: 2\n");
+                break;
+            }
         }
 
         // Exit the loop on 'q' key press
