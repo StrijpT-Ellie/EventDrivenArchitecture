@@ -5,6 +5,7 @@
 #include <vector>
 #include <ctime>
 #include <deque>
+#include <chrono>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -23,6 +24,7 @@
 
 using namespace cv;
 using namespace std;
+using namespace chrono;
 
 struct PixelState {
     Scalar color;
@@ -140,6 +142,9 @@ int main(int argc, char** argv) {
     int right_counter = 0;
     int frame_count = 0;
 
+    // Track time to ensure we monitor for exactly 6 seconds
+    auto start_time = steady_clock::now();
+
     while (true) {
         // Capture a new frame
         cap >> frame;
@@ -183,6 +188,13 @@ int main(int argc, char** argv) {
             break;
         } else if (right_counter >= MOVEMENT_DETECTION_DURATION) {
             printf("Mode selected: 2\n");
+            break;
+        }
+
+        // Check elapsed time
+        auto elapsed_time = duration_cast<seconds>(steady_clock::now() - start_time).count();
+        if (elapsed_time >= 6) {
+            printf("Mode selection time exceeded 6 seconds. Left counter: %d, Right counter: %d\n", left_counter, right_counter);
             break;
         }
 
