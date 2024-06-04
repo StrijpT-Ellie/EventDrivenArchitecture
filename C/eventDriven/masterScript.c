@@ -36,6 +36,9 @@ int check_movement(const char *pipe_path) {
     char buffer[1024];
     ssize_t n = read(fd, buffer, sizeof(buffer));
     close(fd);
+    if (n > 0) {
+        printf("Movement detected in master script\n");
+    }
     return n > 0;
 }
 

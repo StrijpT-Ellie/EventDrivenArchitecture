@@ -66,7 +66,7 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vec
             write(fd, "1", 1);
             close(fd);
         }
-        printf("Movement detected\n");
+        printf("Movement detected and written to pipe\n");
     }
 }
 
