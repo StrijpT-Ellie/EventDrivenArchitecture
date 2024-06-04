@@ -5,11 +5,8 @@
 #include <cstdlib>
 #include <ctime>
 
-#define LED_WIDTH 20
-#define LED_HEIGHT 20
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
-#define LED_SPACING 5
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
 #define NUM_FOOD_PARTICLES 10  // Number of food particles
 #define GRID_SIZE 20  // Size of each grid cell
@@ -77,27 +74,25 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, int &left_
 void update_snake(Snake &snake, int left_movement_intensity, int right_movement_intensity, vector<Particle> &food_particles) {
     // Adjust direction based on movement intensity
     if (right_movement_intensity > left_movement_intensity) {
-        // Turn left
-        float angle = -CV_PI / 2;  // Turn angle in radians (90 degrees)
-        float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
-        float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
-        snake.velocity.x = new_vx;
-        snake.velocity.y = new_vy;
+        if (snake.velocity.x != 0) { // Currently moving horizontally
+            snake.velocity = Point2f(0, -GRID_SIZE); // Move up
+        } else if (snake.velocity.y != 0) { // Currently moving vertically
+            snake.velocity = Point2f(GRID_SIZE, 0); // Move right
+        }
     }
     if (left_movement_intensity > right_movement_intensity) {
-        // Turn right
-        float angle = CV_PI / 2;  // Turn angle in radians (90 degrees)
-        float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
-        float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
-        snake.velocity.x = new_vx;
-        snake.velocity.y = new_vy;
+        if (snake.velocity.x != 0) { // Currently moving horizontally
+            snake.velocity = Point2f(0, GRID_SIZE); // Move down
+        } else if (snake.velocity.y != 0) { // Currently moving vertically
+            snake.velocity = Point2f(-GRID_SIZE, 0); // Move left
+        }
     }
 
     // Update position
     Point2f new_head_position = snake.body[0] + snake.velocity;
     new_head_position = quantize_position(new_head_position);
-    
-    // Check for collisions with the edges of the display
+
+    // Check for collisions with the edges of the display and bounce
     if (new_head_position.x - snake.radius < 0) {
         new_head_position.x = snake.radius;
         snake.velocity.x = abs(snake.velocity.x); // Bounce right
@@ -218,7 +213,7 @@ int main(int argc, char** argv) {
         imshow("LED PCB Wall Simulation", led_wall);
 
         // Exit the loop on 'q' key press
-        if (waitKey(30) == 'q') break;
+        if (waitKey(100) == 'q') break;  // Slower update rate for better control
     }
 
     // Release the camera
