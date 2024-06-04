@@ -39,7 +39,7 @@ int check_movement(const char *pipe_path) {
     close(fd);
 
     if (n > 0) {
-        printf("Movement detected in master script\n");
+        printf("Movement detected in master script: %.*s", (int)n, buffer);
         return 1;
     }
     return 0;
@@ -63,7 +63,10 @@ int main() {
             last_movement = time(NULL);
         }
 
-        if (difftime(time(NULL), last_movement) > TIMEOUT) {
+        time_t now = time(NULL);
+        printf("Time since last movement: %.0f seconds\n", difftime(now, last_movement));
+
+        if (difftime(now, last_movement) > TIMEOUT) {
             kill_script(current_pid);
             current_script = (current_script + 1) % 2;
             current_pid = launch_script(scripts[current_script]);
@@ -71,7 +74,7 @@ int main() {
         }
 
         // Ensure it returns to script1 after script2 times out
-        if (current_script == 1 && difftime(time(NULL), last_movement) > TIMEOUT) {
+        if (current_script == 1 && difftime(now, last_movement) > TIMEOUT) {
             kill_script(current_pid);
             current_script = 0;
             current_pid = launch_script(scripts[current_script]);

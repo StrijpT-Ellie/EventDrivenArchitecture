@@ -5,6 +5,7 @@
 #include <vector>
 #include <fcntl.h>
 #include <unistd.h>
+#include <ctime>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -63,7 +64,9 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vec
     if (movement_detected) {
         int fd = open("/tmp/movement_pipe", O_WRONLY | O_NONBLOCK);
         if (fd != -1) {
-            write(fd, "1", 1);
+            time_t now = time(0);
+            char* dt = ctime(&now);
+            write(fd, dt, strlen(dt));
             close(fd);
         }
         printf("Movement detected and written to pipe\n");
