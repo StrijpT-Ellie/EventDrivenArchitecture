@@ -59,7 +59,9 @@ int main() {
     while (1) {
         sleep(1);
 
-        if (check_movement(pipe_path)) {
+        int movement_detected = check_movement(pipe_path);
+
+        if (movement_detected) {
             last_movement = time(NULL);
         }
 

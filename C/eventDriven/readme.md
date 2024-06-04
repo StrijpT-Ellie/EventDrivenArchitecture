@@ -34,3 +34,9 @@ sudo apt update
 sudo apt install -y build-essential cmake pkg-config
 sudo apt install -y libopencv-dev
 ```
+
+
+--
+to read the pipe file 
+
+tail -f /tmp/movement_pipe
