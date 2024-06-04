@@ -33,7 +33,9 @@ void initialize_led_wall(Mat &led_wall) {
 }
 
 void initialize_snake(Snake &snake) {
-    snake.body.push_back(Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2));
+    int initial_x = (DISPLAY_WIDTH / GRID_SIZE / 2) * GRID_SIZE;
+    int initial_y = (DISPLAY_HEIGHT / GRID_SIZE / 2) * GRID_SIZE;
+    snake.body.push_back(Point2f(initial_x, initial_y));
     snake.velocity = Point2f(GRID_SIZE, 0);  // Initial velocity to the right
     snake.radius = GRID_SIZE / 2;
     snake.color = Scalar(0, 0, 255);  // Red color
