@@ -27,6 +27,7 @@ struct Snake {
     Point2f velocity;
     int radius;
     Scalar color;
+    int segments_to_add; // Number of segments to add when a particle is eaten
 };
 
 void initialize_led_wall(Mat &led_wall) {
@@ -38,6 +39,7 @@ void initialize_snake(Snake &snake) {
     snake.velocity = Point2f(3, 0);  // Initial velocity to the right
     snake.radius = 10;
     snake.color = Scalar(0, 0, 255);  // Red color
+    snake.segments_to_add = 0;  // Initialize with no segments to add
 }
 
 void initialize_food(vector<Particle> &food_particles) {
@@ -111,15 +113,18 @@ void update_snake(Snake &snake, int left_movement_intensity, int right_movement_
         if (norm(snake.body[0] - it->position) < (snake.radius + it->radius)) {
             // Eat the food particle
             it = food_particles.erase(it);
-            // Add new segment to the snake
+            // Add a segment to the snake
+            snake.segments_to_add += 1;
         } else {
             ++it;
         }
     }
 
-    // Ensure the snake's body does not leave a continuous trace by keeping it the same length or growing it
-    if (food_particles.empty() || (norm(snake.body[0] - snake.body.back()) > (snake.radius * 2))) {
+    // Remove the last segment if no new segments are being added
+    if (snake.segments_to_add == 0) {
         snake.body.pop_back();
+    } else {
+        snake.segments_to_add--;
     }
 }
 
