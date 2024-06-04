@@ -7,6 +7,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/stat.h> // Include this header for mkfifo
 
 #define TIMEOUT 15
 
@@ -39,7 +40,7 @@ int check_movement(const char *pipe_path) {
 }
 
 int main() {
-    const char *scripts[] = { "./script1", "./script2" };
+    const char *scripts[] = { "./arrayNoVideo", "./fadingPixels" };
     const char *pipe_path = "/tmp/movement_pipe";
 
     mkfifo(pipe_path, 0666);
