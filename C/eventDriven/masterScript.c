@@ -7,7 +7,7 @@
 #include <time.h>
 #include <fcntl.h>
 #include <string.h>
-#include <sys/stat.h> // Include this header for mkfifo
+#include <sys/stat.h>
 
 #define TIMEOUT 15
 
