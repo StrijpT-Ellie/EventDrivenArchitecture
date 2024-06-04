@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 
 #define TIMEOUT 15
+#define PIPE_BUF 1024
 
 pid_t launch_script(const char *script_path) {
     pid_t pid = fork();
@@ -33,13 +34,15 @@ int check_movement(const char *pipe_path) {
         return 0;
     }
 
-    char buffer[1024];
+    char buffer[PIPE_BUF];
     ssize_t n = read(fd, buffer, sizeof(buffer));
     close(fd);
+
     if (n > 0) {
         printf("Movement detected in master script\n");
+        return 1;
     }
-    return n > 0;
+    return 0;
 }
 
 int main() {
