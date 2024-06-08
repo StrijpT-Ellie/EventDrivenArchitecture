@@ -320,7 +320,7 @@ void brickPong() {
         }
 
         // Flip the frame horizontally to correct the mirrored view
-        flip(frame, frame, 1);
+        //flip(frame, frame, 1);
 
         // Resize the frame to match the LED PCB wall resolution
         resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
@@ -474,7 +474,7 @@ void snake8Bit() {
         }
 
         // Flip the frame horizontally to correct the mirrored view
-        flip(frame, frame, 1);
+        //flip(frame, frame, 1);
 
         // Resize the frame to match the LED PCB wall resolution
         resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
