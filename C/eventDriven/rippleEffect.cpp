@@ -7,6 +7,8 @@
 #include <deque>
 #include <cmath>
 #include <random>
+#include <fcntl.h> // Include for pipe operations
+#include <unistd.h> // Include for pipe operations
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -63,13 +65,28 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<Rip
     absdiff(gray_prev, gray_current, diff);
     threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
+    int movement_detected = 0;
+
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             if (diff.at<uchar>(y, x) > 0) {
                 RippleEffect ripple = { Point(x, y), 0, RIPPLE_DURATION, getRandomColor(), getRandomColor() };
                 ripple_effects.push_back(ripple);
+                movement_detected = 1;
             }
         }
+    }
+
+    if (movement_detected) {
+        int fd = open("/tmp/movement_pipe", O_WRONLY | O_NONBLOCK);
+        if (fd != -1) {
+            printf("Writing to pipe...\n");
+            time_t now = time(0);
+            char* dt = ctime(&now);
+            write(fd, dt, strlen(dt));
+            close(fd);
+        }
+        printf("Movement detected and written to pipe\n");
     }
 }
 
@@ -152,9 +169,9 @@ int main(int argc, char** argv) {
         if (frame.empty()) {
             printf("Error: No captured frame\n");
             break;
-      	 }
-
-	// Flip the frame horizontally
+        }
+        
+        // Flip the frame horizontally
         flip(frame, frame, 1); 
 
         // Resize the frame to match the LED PCB wall resolution

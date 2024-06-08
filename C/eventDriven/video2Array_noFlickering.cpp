@@ -5,6 +5,8 @@
 #include <vector>
 #include <ctime>
 #include <deque>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -40,7 +42,7 @@ void quantize_colors(cv::Mat &image) {
     merge(channels, image);
 }
 
-void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floating_pixels, vector<vector<PixelState>> &pixel_states) {
+bool detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floating_pixels, vector<vector<PixelState>> &pixel_states) {
     Mat hsv_frame;
     cvtColor(frame, hsv_frame, COLOR_BGR2HSV);
 
@@ -55,6 +57,8 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
     inRange(hsv_frame, lower_red2, upper_red2, mask2);
     bitwise_or(mask1, mask2, red_mask);
 
+    bool movement_detected = false;
+
     // Update pixel states based on red detection
     for (int y = 0; y < red_mask.rows; y++) {
         for (int x = 0; x < red_mask.cols; x++) {
@@ -66,6 +70,7 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
                 if (state.count >= DEBOUNCE_FRAMES) {
                     state.isRed = true;
                     state.count = DEBOUNCE_FRAMES; // Cap the count to avoid overflow
+                    movement_detected = true;
                 }
             } else {
                 state.count--;
@@ -90,11 +95,13 @@ void detect_and_float_red_pixels(const Mat &frame, vector<FloatingPixel> &floati
                     floating_pixels.push_back(fp);
                     new_floating_pixels_count++;
                 } else {
-                    return; // Stop adding new floating pixels for this frame
+                    return movement_detected; // Stop adding new floating pixels for this frame
                 }
             }
         }
     }
+
+    return movement_detected;
 }
 
 void update_floating_pixels(vector<FloatingPixel> &floating_pixels, const Size &frame_size, vector<vector<int>> &accumulated_pixels, vector<vector<int>> &settle_timers) {
@@ -178,7 +185,22 @@ void draw_led_wall(Mat &led_wall, const Mat &frame, const vector<FloatingPixel> 
     }
 }
 
-int main(int argc, char** argv) {
+void write_movement_to_pipe(const char *pipe_path) {
+    int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
+    if (fd != -1) {
+        time_t now = time(0);
+        char *dt = ctime(&now);
+        write(fd, dt, strlen(dt));
+        close(fd);
+        printf("Movement detected and written to pipe\n");
+    } else {
+        perror("open pipe for writing failed");
+    }
+}
+
+int main(int argc, char **argv) {
+    const char *pipe_path = "/tmp/movement_pipe";
+
     // Open the default camera
     VideoCapture cap(0);
     if (!cap.isOpened()) {
@@ -209,7 +231,7 @@ int main(int argc, char** argv) {
             printf("Error: No captured frame\n");
             break;
         }
-        
+
         // Flip the frame horizontally
         flip(frame, frame, 1);
 
@@ -224,13 +246,9 @@ int main(int argc, char** argv) {
         for (const Mat &f : frame_buffer) {
             avg_frame += f / FRAME_AVERAGE_COUNT;
         }
-        
-	
-        
+
         // Upload the frame to the GPU
         d_frame.upload(avg_frame);
-        
-        
 
         // Resize the frame to match the LED PCB wall resolution using GPU
         cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
@@ -242,7 +260,12 @@ int main(int argc, char** argv) {
         quantize_colors(avg_frame);
 
         // Detect red pixels and add floating effect
-        detect_and_float_red_pixels(avg_frame, floating_pixels, pixel_states);
+        bool movement_detected = detect_and_float_red_pixels(avg_frame, floating_pixels, pixel_states);
+
+        // If movement is detected, write to the pipe
+        if (movement_detected) {
+            write_movement_to_pipe(pipe_path);
+        }
 
         // Update positions of floating pixels
         update_floating_pixels(floating_pixels, Size(LED_WIDTH, LED_HEIGHT), accumulated_pixels, settle_timers);

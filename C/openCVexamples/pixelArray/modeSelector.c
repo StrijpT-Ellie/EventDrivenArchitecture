@@ -3,43 +3,32 @@
 #include <opencv2/cudawarping.hpp>
 #include <opencv2/cudaimgproc.hpp>
 #include <vector>
-#include <ctime>
 #include <deque>
-#include <cmath>
-#include <random>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
 #define LED_SPACING 5
+#define SETTLE_DURATION 10  // in frames, assuming 30 FPS this would be ~10 seconds
+#define MAX_NEW_FLOATING_PIXELS 10
+#define MAX_ACCUMULATION_LINES 20
+#define FRAME_AVERAGE_COUNT 5
+#define DEBOUNCE_FRAMES 3
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
-#define RIPPLE_DURATION 60  // Duration for ripple to fade out in frames (approx 2 seconds at 30 FPS)
+#define RED_DURATION 10  // Duration for red pixels to stay red in frames (approx 10 seconds at 30 FPS)
+#define MOVEMENT_DETECTION_DURATION 180  // Duration to detect continuous movement (6 seconds at 30 FPS)
+#define MIN_ACTIVE_PIXELS 10  // Minimum number of active pixels to consider significant movement
+#define CHECK_INTERVAL 15  // Number of frames between checks
+#define REQUIRED_CONSECUTIVE_DETECTIONS 6  // Number of consecutive detections needed for mode selection
 
 using namespace cv;
 using namespace std;
 
 struct PixelState {
     Scalar color;
-    Scalar startColor;
-    Scalar endColor;
     int timer;
 };
-
-struct RippleEffect {
-    Point center;
-    int radius;
-    int duration;
-    Scalar startColor;
-    Scalar endColor;
-};
-
-Scalar getRandomColor() {
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
-    static std::uniform_int_distribution<> dis(0, 255);
-    return Scalar(dis(gen), dis(gen), dis(gen));
-}
 
 void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) {
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
@@ -51,57 +40,56 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) 
         for (int x = 0; x < LED_WIDTH; x++) {
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
             rectangle(led_wall, led_rect, green_color, FILLED);
-            led_states[y][x] = { green_color, green_color, green_color, 0 };
+            led_states[y][x] = { green_color, 0 };
         }
     }
 }
 
-void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<RippleEffect> &ripple_effects) {
+void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vector<PixelState>> &led_states, int &left_counter, int &right_counter) {
     Mat gray_prev, gray_current, diff;
     cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
     cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
     absdiff(gray_prev, gray_current, diff);
     threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
+    int left_movement = 0;
+    int right_movement = 0;
+
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             if (diff.at<uchar>(y, x) > 0) {
-                RippleEffect ripple = { Point(x, y), 0, RIPPLE_DURATION, getRandomColor(), getRandomColor() };
-                ripple_effects.push_back(ripple);
-            }
-        }
-    }
-}
-
-void update_ripple_effects(vector<RippleEffect> &ripple_effects, vector<vector<PixelState>> &led_states) {
-    for (auto &ripple : ripple_effects) {
-        ripple.radius++;
-        ripple.duration--;
-
-        for (int y = 0; y < LED_HEIGHT; y++) {
-            for (int x = 0; x < LED_WIDTH; x++) {
-                int dist = sqrt(pow(ripple.center.x - x, 2) + pow(ripple.center.y - y, 2));
-                if (dist <= ripple.radius) {
-                    led_states[y][x].startColor = ripple.startColor;
-                    led_states[y][x].endColor = ripple.endColor;
-                    led_states[y][x].timer = ripple.duration;
+                led_states[y][x].color = Scalar(0, 0, 255); // Red color
+                led_states[y][x].timer = RED_DURATION;
+                if (x < LED_WIDTH / 2) {
+                    left_movement++;
+                } else {
+                    right_movement++;
                 }
             }
         }
     }
 
-    ripple_effects.erase(remove_if(ripple_effects.begin(), ripple_effects.end(),
-                                   [](const RippleEffect &ripple) { return ripple.duration <= 0; }),
-                         ripple_effects.end());
+    if (left_movement > MIN_ACTIVE_PIXELS) {
+        left_counter++;
+    } else {
+        left_counter = max(0, left_counter - 1);
+    }
+
+    if (right_movement > MIN_ACTIVE_PIXELS) {
+        right_counter++;
+    } else {
+        right_counter = max(0, right_counter - 1);
+    }
 }
 
 void update_led_states(vector<vector<PixelState>> &led_states) {
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             if (led_states[y][x].timer > 0) {
-                double ratio = static_cast<double>(led_states[y][x].timer) / RIPPLE_DURATION;
-                led_states[y][x].color = led_states[y][x].startColor * ratio + led_states[y][x].endColor * (1 - ratio);
                 led_states[y][x].timer--;
+                if (led_states[y][x].timer == 0) {
+                    led_states[y][x].color = Scalar(0, 255, 0); // Green color
+                }
             }
         }
     }
@@ -139,12 +127,21 @@ int main(int argc, char** argv) {
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
     Mat frame, prev_frame;
-    vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), Scalar(0, 255, 0), Scalar(0, 255, 0), 0 })); // Green color with timer 0
-    vector<RippleEffect> ripple_effects;
+    cuda::GpuMat d_frame, d_resizedFrame;
+    vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), 0 })); // Green color with timer 0
 
     // Initialize the LED wall
     Mat led_wall;
     initialize_led_wall(led_wall, led_states);
+
+    // Create a CUDA stream for asynchronous processing
+    cuda::Stream stream;
+
+    int left_counter = 0;
+    int right_counter = 0;
+    int frame_count = 0;
+    int left_detections = 0;
+    int right_detections = 0;
 
     while (true) {
         // Capture a new frame
@@ -152,24 +149,24 @@ int main(int argc, char** argv) {
         if (frame.empty()) {
             printf("Error: No captured frame\n");
             break;
-      	 }
+        }
 
-	// Flip the frame horizontally
+        // Flip the frame horizontally
         flip(frame, frame, 1); 
 
-        // Resize the frame to match the LED PCB wall resolution
-        resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
+        // Resize the frame to match the LED PCB wall resolution using GPU
+        d_frame.upload(frame, stream);
+        cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR, stream);
+        d_resizedFrame.download(frame, stream);
+        stream.waitForCompletion();
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
-            detect_movement(prev_frame, frame, ripple_effects);
+            detect_movement(prev_frame, frame, led_states, left_counter, right_counter);
         }
 
         // Update the previous frame
         prev_frame = frame.clone();
-
-        // Update ripple effects
-        update_ripple_effects(ripple_effects, led_states);
 
         // Update the LED states
         update_led_states(led_states);
@@ -179,6 +176,31 @@ int main(int argc, char** argv) {
 
         // Display the LED wall simulation
         imshow("LED PCB Wall Simulation", led_wall);
+
+        // Print counters every CHECK_INTERVAL frames and check for continuous detections
+        frame_count++;
+        if (frame_count % CHECK_INTERVAL == 0) {
+            printf("Left counter: %d, Right counter: %d\n", left_counter, right_counter);
+
+            if (left_counter >= CHECK_INTERVAL) {
+                left_detections++;
+                right_detections = 0;
+            } else if (right_counter >= CHECK_INTERVAL) {
+                right_detections++;
+                left_detections = 0;
+            } else {
+                left_detections = 0;
+                right_detections = 0;
+            }
+
+            if (left_detections >= REQUIRED_CONSECUTIVE_DETECTIONS) {
+                printf("Mode selected: 1\n");
+                break;
+            } else if (right_detections >= REQUIRED_CONSECUTIVE_DETECTIONS) {
+                printf("Mode selected: 2\n");
+                break;
+            }
+        }
 
         // Exit the loop on 'q' key press
         if (waitKey(30) == 'q') break;

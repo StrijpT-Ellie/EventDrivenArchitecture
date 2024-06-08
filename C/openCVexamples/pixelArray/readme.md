@@ -12,3 +12,7 @@ newRipplePixels.c - colorful ripples and fading to random colors
 movingCircle.c - a ball is moving on the screen and collides with pixels activated where movement was detected 
 
 movingBar.c - moving bar is moving right or left in relation to the amount of movement detected and automatically returns lefr
+
+movingBar_dividedScreen.c - screen is divided into two parts, when movement happens in one of the parts it causes the bar to move to the same direction, intensity of movement influences speed
+
+brickPong.c - added bricks to previous script, now possible to play with bricks
