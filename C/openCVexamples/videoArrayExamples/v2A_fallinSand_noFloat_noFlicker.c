@@ -209,6 +209,9 @@ int main(int argc, char** argv) {
             printf("Error: No captured frame\n");
             break;
         }
+        
+        // Flip the frame horizontally
+        flip(frame, frame, 1);
 
         // Add the frame to the buffer
         frame_buffer.push_back(frame.clone());
@@ -221,9 +224,13 @@ int main(int argc, char** argv) {
         for (const Mat &f : frame_buffer) {
             avg_frame += f / FRAME_AVERAGE_COUNT;
         }
-
+        
+	
+        
         // Upload the frame to the GPU
         d_frame.upload(avg_frame);
+        
+        
 
         // Resize the frame to match the LED PCB wall resolution using GPU
         cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
