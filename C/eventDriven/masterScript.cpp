@@ -32,7 +32,7 @@ void kill_script(pid_t pid) {
 // Function to check for movement by reading from the named pipe
 int check_movement(const char *pipe_path) {
     printf("Opening pipe for reading...\n");
-    int fd = open(pipe_path, O_RDONLY | O_NONBLOCK); // Open the pipe for reading in non-blocking mode
+    int fd = open(pipe_path, O_RDONLY); // Open the pipe for reading in blocking mode
     if (fd == -1) { // Check if the pipe failed to open
         perror("open pipe failed"); // Print error message
         return 0; // Return 0 indicating no movement detected
@@ -40,7 +40,7 @@ int check_movement(const char *pipe_path) {
 
     printf("Reading from pipe...\n");
     char buffer[PIPE_BUF]; // Buffer to store data read from the pipe
-    ssize_t n = read(fd, buffer, sizeof(buffer)); // Read data from the pipe
+    ssize_t n = read(fd, buffer, sizeof(buffer) - 1); // Read data from the pipe
     close(fd); // Close the pipe
 
     if (n > 0) { // If data was read from the pipe
@@ -69,8 +69,6 @@ int main() {
     time_t last_movement = time(NULL); // Record the current time as the last movement time
 
     while (1) {
-        sleep(1); // Sleep for 1 second between checks
-
         int movement_detected = check_movement(pipe_path); // Check for movement by reading from the pipe
 
         if (movement_detected) { // If movement was detected
@@ -89,6 +87,8 @@ int main() {
             current_pid = launch_script(scripts[current_script]); // Launch the new script and get its process ID
             last_movement = time(NULL); // Reset the last movement time to the current time
         }
+
+        sleep(1); // Sleep for 1 second between checks
     }
 
     return 0; // Exit the program
