@@ -68,7 +68,7 @@ chmod +x masterScript_3modes
 1. **Run the master script**:
 
 ```sh
-./masterScript_3modes ./arrayNoVideo ./fadingPixels ./rippleEffect
+./masterScript_3modes ./arrayNoVideo ./fadingPixels ./rippleEffect ./video2Array_noFlickering ./gameSelector
 ```
 
 or
