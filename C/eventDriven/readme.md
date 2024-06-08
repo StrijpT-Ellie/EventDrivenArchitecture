@@ -1,23 +1,21 @@
-Sure! Here's a `README.md` file for the solution:
-
-```markdown
 # Motion Detection Script Management
 
 This repository contains a master script that manages and switches between two motion detection scripts (`arrayNoVideo` and `fadingPixels`) based on detected movement. If no movement is detected for a certain period, the master script will switch between the two scripts.
 
 ## Components
 
-1. **Master Script (`masterScript.cpp`)**: Manages and switches between the two motion detection scripts based on movement detection.
+1. **Master Script (`masterScript_3modes.cpp`)**: Manages and switches between the two motion detection scripts based on movement detection.
 2. **Motion Detection Scripts**:
    - **arrayNoVideo.cpp**
    - **fadingPixels.cpp**
+   - **video2Array_noFlickering.cpp**
+   - **rippleEffect.cpp**
 
 ## Requirements
 
 - OpenCV 4.x
 - g++
 - CUDA (optional, if using GPU acceleration)
-
 ## Installation
 
 ### Install Dependencies
@@ -106,4 +104,8 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ```
 
-This `README.md` file provides an overview of the project, installation instructions, usage details, and troubleshooting tips. Adjust the content as needed based on your specific setup and requirements.
+---
+
+gameSelector2.cpp launches game selector which allows to select a game 
+Move hands on the left or right side of the screen for 6 sec to select 
+It counts intensive movement on one side of the screen
