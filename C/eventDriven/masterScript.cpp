@@ -47,10 +47,9 @@ int check_movement(const char *pipe_path) {
         buffer[n] = '\0'; // Null-terminate the string read from the pipe
         printf("Movement detected in master script: %s\n", buffer); // Print the detected movement
         return 1; // Return 1 indicating movement detected
-    } else if (n == -1 && errno != EAGAIN) { // Check if there was an error other than no data available
+    } else if (n == -1 && errno != EAGAIN) { // Check for read errors other than no data (EAGAIN)
         perror("read pipe failed"); // Print error message
     }
-
     printf("No movement detected in master script.\n");
     return 0; // Return 0 indicating no movement detected
 }
@@ -72,6 +71,8 @@ int main() {
     time_t last_movement = time(NULL); // Record the current time as the last movement time
 
     while (1) {
+        sleep(1); // Sleep for 1 second between checks
+
         int movement_detected = check_movement(pipe_path); // Check for movement by reading from the pipe
 
         if (movement_detected) { // If movement was detected
@@ -90,8 +91,6 @@ int main() {
             current_pid = launch_script(scripts[current_script]); // Launch the new script and get its process ID
             last_movement = time(NULL); // Reset the last movement time to the current time
         }
-
-        sleep(1); // Sleep for 1 second between checks
     }
 
     return 0; // Exit the program
