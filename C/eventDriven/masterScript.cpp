@@ -8,6 +8,7 @@
 #include <fcntl.h>      // File control options
 #include <string.h>     // String handling functions
 #include <sys/stat.h>   // Functions for file status
+#include <errno.h>      // Error number definitions
 
 #define TIMEOUT 15      // Timeout period in seconds for switching scripts
 #define PIPE_BUF 1024   // Buffer size for reading from the pipe
