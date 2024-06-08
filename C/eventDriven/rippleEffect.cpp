@@ -7,8 +7,8 @@
 #include <deque>
 #include <cmath>
 #include <random>
-#include <fcntl.h>    // File control options
-#include <unistd.h>   // Unix standard functions for system calls
+#include <fcntl.h>  // For file control options
+#include <unistd.h> // For Unix standard functions
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
