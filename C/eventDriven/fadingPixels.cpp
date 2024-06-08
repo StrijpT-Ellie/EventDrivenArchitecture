@@ -129,6 +129,8 @@ int main(int argc, char** argv) {
             break;
         }
 
+        flip(frame, frame, 1); // Flip the frame horizontally
+
         d_frame.upload(frame);
         cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
         d_resizedFrame.download(frame);
