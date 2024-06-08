@@ -44,8 +44,7 @@ int check_movement(const char *pipe_path) {
     close(fd); // Close the pipe
 
     if (n > 0) { // If data was read from the pipe
-        buffer[n] = '\0'; // Null-terminate the buffer to make it a valid string
-        printf("Movement detected in master script: %s\n", buffer); // Print the detected movement
+        printf("Movement detected in master script: %.*s\n", (int)n, buffer); // Print the detected movement
         return 1; // Return 1 indicating movement detected
     }
     return 0; // Return 0 indicating no movement detected
@@ -74,14 +73,12 @@ int main() {
 
         if (movement_detected) { // If movement was detected
             last_movement = time(NULL); // Update the last movement time to the current time
-            printf("Resetting last movement time to now\n");
         }
 
         time_t now = time(NULL); // Get the current time
         printf("Time since last movement: %.0f seconds\n", difftime(now, last_movement)); // Print the time since the last movement
 
         if (difftime(now, last_movement) > TIMEOUT) { // If the timeout period has elapsed since the last movement
-            printf("Timeout reached, switching scripts\n");
             kill_script(current_pid); // Kill the currently running script
             current_script = (current_script + 1) % 2; // Switch to the other script
             current_pid = launch_script(scripts[current_script]); // Launch the new script and get its process ID
@@ -90,7 +87,6 @@ int main() {
 
         // Ensure it returns to the first script after the second script times out
         if (current_script == 1 && difftime(now, last_movement) > TIMEOUT) {
-            printf("Returning to the first script\n");
             kill_script(current_pid); // Kill the currently running script
             current_script = 0; // Switch back to the first script
             current_pid = launch_script(scripts[current_script]); // Launch the first script and get its process ID
