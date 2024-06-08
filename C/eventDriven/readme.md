@@ -50,7 +50,8 @@ mv fadingPixels.c fadingPixels.cpp
 ```sh
 g++ -o arrayNoVideo arrayNoVideo.cpp `pkg-config --cflags --libs opencv4`
 g++ -o fadingPixels fadingPixels.cpp `pkg-config --cflags --libs opencv4`
-g++ -o masterScript masterScript.cpp
+g++ -o masterScript masterScript.cpp 
+g++ -o masterScript_3modes masterScript_3modes.cpp 
 ```
 
 3. **Set executable permissions (if needed)**:
@@ -59,6 +60,7 @@ g++ -o masterScript masterScript.cpp
 chmod +x arrayNoVideo
 chmod +x fadingPixels
 chmod +x masterScript
+chmod +x masterScript_3modes
 ```
 
 ## Usage
@@ -66,8 +68,10 @@ chmod +x masterScript
 1. **Run the master script**:
 
 ```sh
-./masterScript
+./masterScript_3modes ./arrayNoVideo ./fadingPixels ./rippleEffect
 ```
+
+or
 
 2. **Monitor the named pipe in real-time** (optional, for debugging):
 

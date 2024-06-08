@@ -170,6 +170,9 @@ int main(int argc, char** argv) {
             printf("Error: No captured frame\n");
             break;
         }
+        
+        // Flip the frame horizontally
+        flip(frame, frame, 1); 
 
         // Resize the frame to match the LED PCB wall resolution
         resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
