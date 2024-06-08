@@ -32,7 +32,7 @@ void kill_script(pid_t pid) {
 // Function to check for movement by reading from the named pipe
 int check_movement(const char *pipe_path) {
     printf("Opening pipe for reading...\n");
-    int fd = open(pipe_path, O_RDONLY); // Open the pipe for reading in blocking mode
+    int fd = open(pipe_path, O_RDONLY | O_NONBLOCK); // Open the pipe for reading in non-blocking mode
     if (fd == -1) { // Check if the pipe failed to open
         perror("open pipe failed"); // Print error message
         return 0; // Return 0 indicating no movement detected
@@ -47,7 +47,10 @@ int check_movement(const char *pipe_path) {
         buffer[n] = '\0'; // Null-terminate the string read from the pipe
         printf("Movement detected in master script: %s\n", buffer); // Print the detected movement
         return 1; // Return 1 indicating movement detected
+    } else if (n == -1 && errno != EAGAIN) { // Check if there was an error other than no data available
+        perror("read pipe failed"); // Print error message
     }
+
     printf("No movement detected in master script.\n");
     return 0; // Return 0 indicating no movement detected
 }
