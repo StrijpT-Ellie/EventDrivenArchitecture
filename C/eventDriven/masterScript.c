@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #define TIMEOUT 15
 #define PIPE_BUF 1024
@@ -39,8 +40,10 @@ int check_movement(const char *pipe_path) {
     close(fd);
 
     if (n > 0) {
-        printf("Movement detected in master script: %.*s", (int)n, buffer);
+        printf("Movement detected in master script: %.*s\n", (int)n, buffer);
         return 1;
+    } else if (n == -1 && errno != EAGAIN) {
+        perror("read pipe failed");
     }
     return 0;
 }
@@ -49,7 +52,12 @@ int main() {
     const char *scripts[] = { "./arrayNoVideo", "./fadingPixels" };
     const char *pipe_path = "/tmp/movement_pipe";
 
-    mkfifo(pipe_path, 0666);
+    if (mkfifo(pipe_path, 0666) == -1) {
+        if (errno != EEXIST) {
+            perror("mkfifo failed");
+            return 1;
+        }
+    }
 
     size_t current_script = 0;
     pid_t current_pid = launch_script(scripts[current_script]);
@@ -69,14 +77,15 @@ int main() {
         printf("Time since last movement: %.0f seconds\n", difftime(now, last_movement));
 
         if (difftime(now, last_movement) > TIMEOUT) {
+            printf("Timeout reached, switching scripts\n");
             kill_script(current_pid);
             current_script = (current_script + 1) % 2;
             current_pid = launch_script(scripts[current_script]);
             last_movement = time(NULL);
         }
 
-        // Ensure it returns to script1 after script2 times out
         if (current_script == 1 && difftime(now, last_movement) > TIMEOUT) {
+            printf("Switching back to script 1\n");
             kill_script(current_pid);
             current_script = 0;
             current_pid = launch_script(scripts[current_script]);
