@@ -48,6 +48,7 @@ int check_movement(const char *pipe_path) {
         printf("Movement detected in master script: %s\n", buffer); // Print the detected movement
         return 1; // Return 1 indicating movement detected
     }
+    printf("No movement detected in master script.\n");
     return 0; // Return 0 indicating no movement detected
 }
 
@@ -78,9 +79,10 @@ int main() {
         }
 
         time_t now = time(NULL); // Get the current time
-        printf("Time since last movement: %.0f seconds\n", difftime(now, last_movement)); // Print the time since the last movement
+        double time_since_last_movement = difftime(now, last_movement); // Calculate time since last movement
+        printf("Time since last movement: %.0f seconds\n", time_since_last_movement); // Print the time since the last movement
 
-        if (difftime(now, last_movement) > TIMEOUT) { // If the timeout period has elapsed since the last movement
+        if (time_since_last_movement > TIMEOUT) { // If the timeout period has elapsed since the last movement
             printf("Timeout reached, switching scripts...\n");
             kill_script(current_pid); // Kill the currently running script
             current_script = (current_script + 1) % 2; // Switch to the other script
@@ -89,7 +91,7 @@ int main() {
         }
 
         // Ensure it returns to the first script after the second script times out
-        if (current_script == 1 && difftime(now, last_movement) > TIMEOUT) {
+        if (current_script == 1 && time_since_last_movement > TIMEOUT) {
             printf("Timeout reached on script 2, switching back to script 1...\n");
             kill_script(current_pid); // Kill the currently running script
             current_script = 0; // Switch back to the first script
