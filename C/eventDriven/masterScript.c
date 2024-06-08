@@ -1,97 +1,98 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <time.h>
-#include <fcntl.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <errno.h>
+#include <stdio.h>      // Standard input/output library
+#include <stdlib.h>     // Standard library for general functions
+#include <unistd.h>     // Unix standard functions for system calls
+#include <sys/types.h>  // Data types used in system calls
+#include <sys/wait.h>   // Macros related to process termination
+#include <signal.h>     // Signal handling functions and macros
+#include <time.h>       // Time library for handling timestamps
+#include <fcntl.h>      // File control options
+#include <string.h>     // String handling functions
+#include <sys/stat.h>   // Functions for file status
 
-#define TIMEOUT 15
-#define PIPE_BUF 1024
+#define TIMEOUT 15      // Timeout period in seconds for switching scripts
+#define PIPE_BUF 1024   // Buffer size for reading from the pipe
 
+// Function to launch a script and return its process ID
 pid_t launch_script(const char *script_path) {
-    pid_t pid = fork();
-    if (pid == 0) {
-        execl(script_path, script_path, NULL);
-        perror("execl failed");
-        exit(EXIT_FAILURE);
+    pid_t pid = fork(); // Create a new process
+    if (pid == 0) {     // Child process block
+        execl(script_path, script_path, NULL); // Replace child process with the script
+        perror("execl failed"); // Print error message if execl fails
+        exit(EXIT_FAILURE); // Exit child process with failure code
     }
-    return pid;
+    return pid; // Return the process ID of the child process
 }
 
+// Function to kill a script given its process ID
 void kill_script(pid_t pid) {
-    kill(pid, SIGTERM);
-    waitpid(pid, NULL, 0);
+    kill(pid, SIGTERM); // Send SIGTERM signal to terminate the process
+    waitpid(pid, NULL, 0); // Wait for the process to terminate and clean up
 }
 
+// Function to check for movement by reading from the named pipe
 int check_movement(const char *pipe_path) {
-    int fd = open(pipe_path, O_RDONLY | O_NONBLOCK);
-    if (fd == -1) {
-        perror("open pipe failed");
-        return 0;
+    printf("Opening pipe for reading...\n");
+    int fd = open(pipe_path, O_RDONLY | O_NONBLOCK); // Open the pipe for reading in non-blocking mode
+    if (fd == -1) { // Check if the pipe failed to open
+        perror("open pipe failed"); // Print error message
+        return 0; // Return 0 indicating no movement detected
     }
 
-    char buffer[PIPE_BUF];
-    ssize_t n = read(fd, buffer, sizeof(buffer));
-    close(fd);
+    printf("Reading from pipe...\n");
+    char buffer[PIPE_BUF]; // Buffer to store data read from the pipe
+    ssize_t n = read(fd, buffer, sizeof(buffer)); // Read data from the pipe
+    close(fd); // Close the pipe
 
-    if (n > 0) {
-        printf("Movement detected in master script: %.*s\n", (int)n, buffer);
-        return 1;
-    } else if (n == -1 && errno != EAGAIN) {
-        perror("read pipe failed");
+    if (n > 0) { // If data was read from the pipe
+        printf("Movement detected in master script: %.*s\n", (int)n, buffer); // Print the detected movement
+        return 1; // Return 1 indicating movement detected
     }
-    return 0;
+    return 0; // Return 0 indicating no movement detected
 }
 
 int main() {
-    const char *scripts[] = { "./arrayNoVideo", "./fadingPixels" };
-    const char *pipe_path = "/tmp/movement_pipe";
+    const char *scripts[] = { "./arrayNoVideo", "./fadingPixels" }; // Array of script paths
+    const char *pipe_path = "/tmp/movement_pipe"; // Path to the named pipe
 
-    if (mkfifo(pipe_path, 0666) == -1) {
-        if (errno != EEXIST) {
-            perror("mkfifo failed");
-            return 1;
-        }
+    // Remove any existing pipe if it exists and create a new one
+    unlink(pipe_path); // Remove the existing named pipe, if any
+    if (mkfifo(pipe_path, 0666) == -1) { // Create a new named pipe with read/write permissions
+        perror("mkfifo failed"); // Print error message if pipe creation fails
+        exit(EXIT_FAILURE); // Exit the program with failure code
     }
 
-    size_t current_script = 0;
-    pid_t current_pid = launch_script(scripts[current_script]);
+    size_t current_script = 0; // Index of the currently running script
+    pid_t current_pid = launch_script(scripts[current_script]); // Launch the initial script and get its process ID
 
-    time_t last_movement = time(NULL);
+    time_t last_movement = time(NULL); // Record the current time as the last movement time
 
     while (1) {
-        sleep(1);
+        sleep(1); // Sleep for 1 second between checks
 
-        int movement_detected = check_movement(pipe_path);
+        int movement_detected = check_movement(pipe_path); // Check for movement by reading from the pipe
 
-        if (movement_detected) {
-            last_movement = time(NULL);
+        if (movement_detected) { // If movement was detected
+            last_movement = time(NULL); // Update the last movement time to the current time
         }
 
-        time_t now = time(NULL);
-        printf("Time since last movement: %.0f seconds\n", difftime(now, last_movement));
+        time_t now = time(NULL); // Get the current time
+        printf("Time since last movement: %.0f seconds\n", difftime(now, last_movement)); // Print the time since the last movement
 
-        if (difftime(now, last_movement) > TIMEOUT) {
-            printf("Timeout reached, switching scripts\n");
-            kill_script(current_pid);
-            current_script = (current_script + 1) % 2;
-            current_pid = launch_script(scripts[current_script]);
-            last_movement = time(NULL);
+        if (difftime(now, last_movement) > TIMEOUT) { // If the timeout period has elapsed since the last movement
+            kill_script(current_pid); // Kill the currently running script
+            current_script = (current_script + 1) % 2; // Switch to the other script
+            current_pid = launch_script(scripts[current_script]); // Launch the new script and get its process ID
+            last_movement = time(NULL); // Reset the last movement time to the current time
         }
 
+        // Ensure it returns to the first script after the second script times out
         if (current_script == 1 && difftime(now, last_movement) > TIMEOUT) {
-            printf("Switching back to script 1\n");
-            kill_script(current_pid);
-            current_script = 0;
-            current_pid = launch_script(scripts[current_script]);
-            last_movement = time(NULL);
+            kill_script(current_pid); // Kill the currently running script
+            current_script = 0; // Switch back to the first script
+            current_pid = launch_script(scripts[current_script]); // Launch the first script and get its process ID
+            last_movement = time(NULL); // Reset the last movement time to the current time
         }
     }
 
-    return 0;
+    return 0; // Exit the program
 }
