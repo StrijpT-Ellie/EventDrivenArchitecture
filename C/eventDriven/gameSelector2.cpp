@@ -80,6 +80,16 @@ struct Snake {
     int segments_to_add; // Number of segments to add when a particle is eaten
 };
 
+// Function Declarations
+void write_movement_to_pipe(const char *pipe_path);
+void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vector<PixelState>> &led_states, int &left_counter, int &right_counter, const char *pipe_path);
+void update_led_states(vector<vector<PixelState>> &led_states);
+void draw_led_wall(Mat &led_wall, const vector<vector<PixelState>> &led_states);
+void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states);
+int mode_selector(const char *pipe_path);
+void brickPong(const char *pipe_path);
+void snake8Bit(const char *pipe_path);
+
 void write_movement_to_pipe(const char *pipe_path) {
     int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
     if (fd != -1) {
@@ -90,6 +100,21 @@ void write_movement_to_pipe(const char *pipe_path) {
         printf("Movement detected and written to pipe\n");
     } else {
         perror("open pipe for writing failed");
+    }
+}
+
+void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) {
+    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+    int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
+    int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
+    Scalar green_color(0, 255, 0); // Green color
+
+    for (int y = 0; y < LED_HEIGHT; y++) {
+        for (int x = 0; x < LED_WIDTH; x++) {
+            Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
+            rectangle(led_wall, led_rect, green_color, FILLED);
+            led_states[y][x] = { green_color, 0 };
+        }
     }
 }
 
