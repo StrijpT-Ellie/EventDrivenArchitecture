@@ -97,7 +97,7 @@ void write_movement_to_pipe(const char *pipe_path) {
         char *dt = ctime(&now);
         write(fd, dt, strlen(dt));
         close(fd);
-        printf("Movement detected and written to pipe\n");
+        printf("Movement detected and written to pipe: %s\n", dt);
     } else {
         perror("open pipe for writing failed");
     }
@@ -155,6 +155,7 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<vec
     }
 
     if (left_movement > MIN_ACTIVE_PIXELS || right_movement > MIN_ACTIVE_PIXELS) {
+        printf("Movement detected: left=%d, right=%d\n", left_movement, right_movement);
         write_movement_to_pipe(pipe_path);
     }
 }
@@ -369,6 +370,7 @@ void brickPong(const char *pipe_path) {
             right_movement_intensity = countNonZero(right_half);
 
             if (left_movement_intensity > MIN_ACTIVE_PIXELS || right_movement_intensity > MIN_ACTIVE_PIXELS) {
+                printf("BrickPong movement detected: left=%d, right=%d\n", left_movement_intensity, right_movement_intensity);
                 write_movement_to_pipe(pipe_path);
             }
         }
@@ -527,6 +529,7 @@ void snake8Bit(const char *pipe_path) {
             right_movement_intensity = countNonZero(right_half);
 
             if (left_movement_intensity > MIN_ACTIVE_PIXELS || right_movement_intensity > MIN_ACTIVE_PIXELS) {
+                printf("Snake8Bit movement detected: left=%d, right=%d\n", left_movement_intensity, right_movement_intensity);
                 write_movement_to_pipe(pipe_path);
             }
         }
