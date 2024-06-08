@@ -151,6 +151,9 @@ int main(int argc, char** argv) {
             break;
         }
 
+        // Flip the frame horizontally
+        flip(frame, frame, 1); 
+
         // Resize the frame to match the LED PCB wall resolution using GPU
         d_frame.upload(frame, stream);
         cuda::resize(d_frame, d_resizedFrame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR, stream);
