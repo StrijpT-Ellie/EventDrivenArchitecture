@@ -246,9 +246,7 @@ int mode_selector() {
                 cap.release();
                 destroyAllWindows();
                 return 1;
-            } else if (right_detections >= REQUIRED_CONSEC
-
-UTIVE_DETECTIONS) {
+            } else if (right_detections >= REQUIRED_CONSECUTIVE_DETECTIONS) {
                 printf("Mode selected: 2\n");
                 cap.release();
                 destroyAllWindows();
@@ -331,7 +329,7 @@ void brickPong() {
         if (!prev_frame.empty()) {
             Mat gray_prev, gray_current, diff;
             cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
-            cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
+            cvtColor(frame, gray_current, COLOR_BGR2GRAY);
             absdiff(gray_prev, gray_current, diff);
             threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
@@ -479,15 +477,13 @@ void snake8Bit() {
         flip(frame, frame, 1);
 
         // Resize the frame to match the LED PCB wall resolution
-
-
         resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
 
         // If there's a previous frame, detect movement
         if (!prev_frame.empty()) {
             Mat gray_prev, gray_current, diff;
             cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
-            cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
+            cvtColor(frame, gray_current, COLOR_BGR2GRAY);
             absdiff(gray_prev, gray_current, diff);
             threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
