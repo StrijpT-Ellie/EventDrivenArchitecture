@@ -85,14 +85,14 @@ int main() {
         if (time_since_last_movement > TIMEOUT) { // If the timeout period has elapsed since the last movement
             printf("Timeout reached, switching scripts...\n");
             kill_script(current_pid); // Kill the currently running script
-            current_script = (current_script + 1) % 3; // Switch to the next script
+            current_script = (current_script + 1) % 3; // Switch to the next script (modulo 3 for 3 scripts)
             current_pid = launch_script(scripts[current_script]); // Launch the new script and get its process ID
             last_movement = time(NULL); // Reset the last movement time to the current time
         }
 
-        // Ensure it returns to the first script after the second or third script times out
-        if ((current_script == 1 || current_script == 2) && time_since_last_movement > TIMEOUT) {
-            printf("Timeout reached on script %zu, switching back to script 1...\n", current_script + 1);
+        // Ensure it returns to the first script after the second and third scripts time out
+        if (current_script != 0 && time_since_last_movement > TIMEOUT) {
+            printf("Timeout reached on script %zu, switching back to script 0...\n", current_script);
             kill_script(current_pid); // Kill the currently running script
             current_script = 0; // Switch back to the first script
             current_pid = launch_script(scripts[current_script]); // Launch the first script and get its process ID

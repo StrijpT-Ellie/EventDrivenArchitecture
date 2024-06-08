@@ -7,8 +7,8 @@
 #include <deque>
 #include <cmath>
 #include <random>
-#include <fcntl.h>  // For file control options
-#include <unistd.h> // For Unix standard functions
+#include <fcntl.h> // Include for pipe operations
+#include <unistd.h> // Include for pipe operations
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -66,6 +66,7 @@ void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<Rip
     threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
     int movement_detected = 0;
+
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
             if (diff.at<uchar>(y, x) > 0) {
