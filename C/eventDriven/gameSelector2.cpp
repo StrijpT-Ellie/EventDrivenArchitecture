@@ -9,6 +9,7 @@
 #include <ctime>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -89,6 +90,14 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states);
 int mode_selector(const char *pipe_path);
 void brickPong(const char *pipe_path);
 void snake8Bit(const char *pipe_path);
+
+void create_pipe(const char *pipe_path) {
+    if (mkfifo(pipe_path, 0666) == -1) {
+        perror("mkfifo failed");
+    } else {
+        printf("Named pipe created at %s\n", pipe_path);
+    }
+}
 
 void write_movement_to_pipe(const char *pipe_path) {
     int fd = open(pipe_path, O_WRONLY | O_NONBLOCK);
@@ -631,6 +640,9 @@ void snake8Bit(const char *pipe_path) {
 
 int main(int argc, char** argv) {
     const char *pipe_path = "/tmp/movement_pipe";
+
+    // Create the named pipe
+    create_pipe(pipe_path);
 
     int mode = mode_selector(pipe_path);
     if (mode == 1) {
