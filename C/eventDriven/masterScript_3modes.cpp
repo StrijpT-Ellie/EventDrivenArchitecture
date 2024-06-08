@@ -92,7 +92,7 @@ int main() {
 
         // Ensure it returns to the first script after the second or third script times out
         if ((current_script == 1 || current_script == 2) && time_since_last_movement > TIMEOUT) {
-            printf("Timeout reached on script %d, switching back to script 1...\n", current_script + 1);
+            printf("Timeout reached on script %zu, switching back to script 1...\n", current_script + 1);
             kill_script(current_pid); // Kill the currently running script
             current_script = 0; // Switch back to the first script
             current_pid = launch_script(scripts[current_script]); // Launch the first script and get its process ID
