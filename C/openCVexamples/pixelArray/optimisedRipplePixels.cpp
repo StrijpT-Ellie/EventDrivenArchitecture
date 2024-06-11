@@ -62,10 +62,10 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) 
 
 void detect_movement(const GpuMat &prev_frame, const GpuMat &current_frame, vector<RippleEffect> &ripple_effects) {
     GpuMat gray_prev, gray_current, diff;
-    cuda::cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
-    cuda::cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
-    cuda::absdiff(gray_prev, gray_current, diff);
-    cuda::threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
+    cv::cuda::cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
+    cv::cuda::cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
+    cv::cuda::absdiff(gray_prev, gray_current, diff);
+    cv::cuda::threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
     Mat h_diff;
     diff.download(h_diff);
@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
         flip(frame, frame, 1); 
 
         // Resize the frame to match the LED PCB wall resolution
-        resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
+        cv::resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
 
         d_frame.upload(frame);
 
