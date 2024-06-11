@@ -17,10 +17,9 @@
 #define LED_SPACING 5
 #define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
 #define RIPPLE_DURATION 60  // Duration for ripple to fade out in frames (approx 2 seconds at 30 FPS)
-#define MAX_RIPPLES 10  // Maximum number of concurrent ripples
+#define MAX_RIPPLES 10  // Maximum number of ripples allowed at a time
 
 using namespace cv;
-using namespace cv::cuda;
 using namespace std;
 
 struct PixelState {
@@ -60,26 +59,23 @@ void initialize_led_wall(Mat &led_wall, vector<vector<PixelState>> &led_states) 
     }
 }
 
-void detect_movement(const GpuMat &prev_frame, const GpuMat &current_frame, vector<RippleEffect> &ripple_effects) {
-    GpuMat gray_prev, gray_current, diff;
-    cv::cuda::cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
-    cv::cuda::cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
-    cv::cuda::absdiff(gray_prev, gray_current, diff);
-    cv::cuda::threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
-
-    Mat h_diff;
-    diff.download(h_diff);
+void detect_movement(const Mat &prev_frame, const Mat &current_frame, vector<RippleEffect> &ripple_effects) {
+    Mat gray_prev, gray_current, diff;
+    cvtColor(prev_frame, gray_prev, COLOR_BGR2GRAY);
+    cvtColor(current_frame, gray_current, COLOR_BGR2GRAY);
+    absdiff(gray_prev, gray_current, diff);
+    threshold(diff, diff, MOVEMENT_THRESHOLD, 255, THRESH_BINARY);
 
     int movement_detected = 0;
+    int active_ripples = ripple_effects.size();
 
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
-            if (h_diff.at<uchar>(y, x) > 0) {
-                if (ripple_effects.size() < MAX_RIPPLES) {
-                    RippleEffect ripple = { Point(x, y), 0, RIPPLE_DURATION, getRandomColor(), getRandomColor() };
-                    ripple_effects.push_back(ripple);
-                }
+            if (diff.at<uchar>(y, x) > 0 && active_ripples < MAX_RIPPLES) {
+                RippleEffect ripple = { Point(x, y), 0, RIPPLE_DURATION, getRandomColor(), getRandomColor() };
+                ripple_effects.push_back(ripple);
                 movement_detected = 1;
+                active_ripples++;
             }
         }
     }
@@ -162,8 +158,7 @@ int main(int argc, char** argv) {
     namedWindow("LED PCB Wall Simulation", WINDOW_NORMAL);
     resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
-    Mat frame;
-    GpuMat d_frame, d_prev_frame;
+    Mat frame, prev_frame;
     vector<vector<PixelState>> led_states(LED_HEIGHT, vector<PixelState>(LED_WIDTH, { Scalar(0, 255, 0), Scalar(0, 255, 0), Scalar(0, 255, 0), 0 })); // Green color with timer 0
     vector<RippleEffect> ripple_effects;
 
@@ -183,17 +178,15 @@ int main(int argc, char** argv) {
         flip(frame, frame, 1); 
 
         // Resize the frame to match the LED PCB wall resolution
-        cv::resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
-
-        d_frame.upload(frame);
+        resize(frame, frame, Size(LED_WIDTH, LED_HEIGHT), 0, 0, INTER_LINEAR);
 
         // If there's a previous frame, detect movement
-        if (!d_prev_frame.empty()) {
-            detect_movement(d_prev_frame, d_frame, ripple_effects);
+        if (!prev_frame.empty()) {
+            detect_movement(prev_frame, frame, ripple_effects);
         }
 
         // Update the previous frame
-        d_prev_frame = d_frame.clone();
+        prev_frame = frame.clone();
 
         // Update ripple effects
         update_ripple_effects(ripple_effects, led_states);
