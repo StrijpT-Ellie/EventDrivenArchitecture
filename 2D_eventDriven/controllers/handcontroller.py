@@ -1,7 +1,6 @@
-#this is a mediapipe handcontroller.py file that returns a number as an output and saves it into .txt file
-
 import cv2
 import mediapipe as mp
+import numpy as np
 
 class HandDetector:
     def __init__(self, model_complexity=0, min_detection_confidence=0.5, min_tracking_confidence=0.5):
@@ -72,7 +71,14 @@ class App:
                     print("Ignoring empty camera frame.")
                     continue
 
-                image, results = self.detector.process(image)
+                # Convert image to GPU format
+                gpu_image = cv2.cuda_GpuMat()
+                gpu_image.upload(image)
+                gpu_image = cv2.cuda.cvtColor(gpu_image, cv2.COLOR_BGR2RGB)
+
+                # Process image using MediaPipe
+                cpu_image = gpu_image.download()
+                image, results = self.detector.process(cpu_image)
 
                 if results.multi_hand_landmarks:
                     for hand_landmarks in results.multi_hand_landmarks:
