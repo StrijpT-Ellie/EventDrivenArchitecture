@@ -74,19 +74,22 @@ class App:
                 # Convert image to GPU format
                 gpu_image = cv2.cuda_GpuMat()
                 gpu_image.upload(image)
-                gpu_image = cv2.cuda.cvtColor(gpu_image, cv2.COLOR_BGR2RGB)
+                gpu_image_rgb = cv2.cuda.cvtColor(gpu_image, cv2.COLOR_BGR2RGB)
 
                 # Process image using MediaPipe
-                cpu_image = gpu_image.download()
-                image, results = self.detector.process(cpu_image)
+                cpu_image_rgb = gpu_image_rgb.download()
+                _, results = self.detector.process(cpu_image_rgb)
 
+                # Draw landmarks on the original image
                 if results.multi_hand_landmarks:
                     for hand_landmarks in results.multi_hand_landmarks:
                         self.detector.draw_landmarks(image, hand_landmarks)
 
+                # Count fingers
                 finger_count = self.counter.count_fingers(results)
                 self.write_to_file(finger_count)  # Write the count to the file and flush
 
+                # Display the output
                 cv2.putText(image, str(finger_count), (50, 450), cv2.FONT_HERSHEY_SIMPLEX, 3, (255, 0, 0), 10)
                 cv2.imshow('MediaPipe Hands', image)
                 if cv2.waitKey(5) & 0xFF == 27:
