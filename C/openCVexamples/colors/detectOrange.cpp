@@ -154,4 +154,11 @@ int main(int argc, char** argv) {
 
         // Exit the loop on 'q' key press
         if (waitKey(30) == 'q') break;
-   
+    }
+
+    // Release the camera
+    cap.release();
+    destroyAllWindows();
+
+    return 0;
+}
