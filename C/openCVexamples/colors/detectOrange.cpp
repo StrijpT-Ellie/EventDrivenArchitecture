@@ -52,17 +52,24 @@ void detect_orange(const Mat &current_frame, vector<vector<PixelState>> &led_sta
 
     inRange(hsv_frame, lower_orange, upper_orange, mask);
 
+    int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
+    int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
+
     for (int y = 0; y < LED_HEIGHT; y++) {
         for (int x = 0; x < LED_WIDTH; x++) {
-            int led_size_x = (DISPLAY_WIDTH - (LED_WIDTH - 1) * LED_SPACING) / LED_WIDTH;
-            int led_size_y = (DISPLAY_HEIGHT - (LED_HEIGHT - 1) * LED_SPACING) / LED_HEIGHT;
-
             Rect led_rect(x * (led_size_x + LED_SPACING), y * (led_size_y + LED_SPACING), led_size_x, led_size_y);
-            Mat roi = mask(led_rect);
 
-            if (countNonZero(roi) > (roi.rows * roi.cols) / 2) { // If more than half of the region is orange
-                led_states[y][x].color = Scalar(0, 0, 255); // Red color
-                led_states[y][x].timer = RED_DURATION;
+            // Check if the rectangle is within the frame boundaries
+            if (led_rect.x >= 0 && led_rect.y >= 0 &&
+                led_rect.x + led_rect.width <= mask.cols &&
+                led_rect.y + led_rect.height <= mask.rows) {
+                
+                Mat roi = mask(led_rect);
+
+                if (countNonZero(roi) > (roi.rows * roi.cols) / 2) { // If more than half of the region is orange
+                    led_states[y][x].color = Scalar(0, 0, 255); // Red color
+                    led_states[y][x].timer = RED_DURATION;
+                }
             }
         }
     }
@@ -147,11 +154,4 @@ int main(int argc, char** argv) {
 
         // Exit the loop on 'q' key press
         if (waitKey(30) == 'q') break;
-    }
-
-    // Release the camera
-    cap.release();
-    destroyAllWindows();
-
-    return 0;
-}
+   
