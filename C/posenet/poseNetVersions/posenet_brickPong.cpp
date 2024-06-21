@@ -2,11 +2,18 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <cmath>
-#include "poseNet.h"
+#include <fcntl.h>
+#include <unistd.h>
+#include <sstream>
+#include <string>
 
+#define LED_WIDTH 20
+#define LED_HEIGHT 20
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
-#define BAR_HEIGHT 20
+#define LED_SPACING 5
+#define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
+#define BAR_HEIGHT 20  // Height of the bar at the bottom
 #define BRICK_ROWS 5
 #define BRICK_COLS 10
 #define BRICK_WIDTH (DISPLAY_WIDTH / BRICK_COLS)
@@ -37,7 +44,9 @@ struct Brick {
     bool active;
 };
 
-poseNet* net = NULL;
+void initialize_led_wall(Mat &led_wall) {
+    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+}
 
 void initialize_floating_ball(FloatingBall &ball) {
     ball.position = Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
@@ -47,7 +56,7 @@ void initialize_floating_ball(FloatingBall &ball) {
 }
 
 void initialize_bar(Bar &bar) {
-    bar.position = Point2f(DISPLAY_WIDTH / 2 - 50, DISPLAY_HEIGHT - BAR_HEIGHT);
+    bar.position = Point2f(0, DISPLAY_HEIGHT - BAR_HEIGHT);
     bar.width = 100;
     bar.height = BAR_HEIGHT;
     bar.color = Scalar(255, 0, 0);  // Blue color
@@ -121,97 +130,83 @@ void update_bar(Bar &bar, float hand_x) {
     if (bar.position.x + bar.width > DISPLAY_WIDTH) bar.position.x = DISPLAY_WIDTH - bar.width;
 }
 
-void draw_game(Mat &game_frame, const FloatingBall &ball, const Bar &bar, const vector<Brick> &bricks) {
-    // Clear the frame
-    game_frame = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+void draw_led_wall(Mat &led_wall, const FloatingBall &ball, const Bar &bar, const vector<Brick> &bricks) {
+    // Clear the LED wall
+    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
 
     // Draw the floating ball
-    cv::circle(game_frame, ball.position, ball.radius, ball.color, FILLED);
+    cv::circle(led_wall, ball.position, ball.radius, ball.color, FILLED);
 
     // Draw the bar
-    rectangle(game_frame, Rect(bar.position.x, bar.position.y, bar.width, bar.height), bar.color, FILLED);
+    rectangle(led_wall, Rect(bar.position.x, bar.position.y, bar.width, bar.height), bar.color, FILLED);
 
     // Draw the bricks
     for (const auto &brick : bricks) {
         if (brick.active) {
-            rectangle(game_frame, Rect(brick.position.x, brick.position.y, brick.width, brick.height), brick.color, FILLED);
+            rectangle(led_wall, Rect(brick.position.x, brick.position.y, brick.width, brick.height), brick.color, FILLED);
         }
     }
 }
 
 int main(int argc, char** argv) {
-    // Initialize PoseNet
-    net = poseNet::Create("resnet18-hand", 0.5f);
-
-    // Open the default camera
-    VideoCapture cap(0);
-    if (!cap.isOpened()) {
-        printf("Error: Could not open camera\n");
+    // Open the named pipe for reading
+    const char* pipePath = "/tmp/movement_pipe";
+    int pipe_fd = open(pipePath, O_RDONLY);
+    if (pipe_fd == -1) {
+        printf("Error: Could not open named pipe\n");
         return -1;
     }
 
-    // Set frame rate to reduce processing load
-    cap.set(CAP_PROP_FPS, 15);
-
-    // Create a window and resize it
-    namedWindow("Brick Pong Game", WINDOW_NORMAL);
-    resizeWindow("Brick Pong Game", DISPLAY_WIDTH, DISPLAY_HEIGHT);
-
-    Mat frame;
+    // Initialize game elements
+    Mat frame, prev_frame;
     FloatingBall floating_ball;
     Bar bar;
     vector<Brick> bricks;
+    int left_movement_intensity = 0;
+    int right_movement_intensity = 0;
 
-    // Initialize the floating ball, bar, and bricks
+    // Initialize the LED wall, floating ball, bar, and bricks
+    Mat led_wall;
+    initialize_led_wall(led_wall);
     initialize_floating_ball(floating_ball);
     initialize_bar(bar);
     initialize_bricks(bricks);
 
     while (true) {
-        // Capture a new frame
-        cap >> frame;
-        if (frame.empty()) {
-            printf("Error: No captured frame\n");
-            break;
-        }
-
-        // Resize the frame to match the display resolution
-        resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
-
-        // Convert frame to uchar3 for PoseNet processing
-        Mat frame_rgb;
-        cvtColor(frame, frame_rgb, COLOR_BGR2RGB);
-
-        // Run PoseNet to detect hands
-        std::vector<poseNet::ObjectPose> poses;
-        if (!net->Process((uchar3*)frame_rgb.data, frame_rgb.cols, frame_rgb.rows, poses)) {
-            printf("Error: PoseNet processing failed\n");
-            continue;
-        }
-
-        // Update the bar based on the hand position
-        if (!poses.empty() && !poses[0].Keypoints.empty()) {
-            float hand_x = poses[0].Keypoints[0].x; // Using Keypoint ID 0 for wrist
-            update_bar(bar, hand_x);
+        // Read from the named pipe
+        char buffer[256];
+        ssize_t bytesRead = read(pipe_fd, buffer, sizeof(buffer) - 1);
+        if (bytesRead > 0) {
+            buffer[bytesRead] = '\0';
+            float hand_x, hand_y;
+            std::istringstream iss(buffer);
+            std::string line;
+            while (std::getline(iss, line)) {
+                // Parse the coordinates from the line
+                if (sscanf(line.c_str(), "Pose %*d, Keypoint %*d: (%f, %f)", &hand_x, &hand_y) == 2) {
+                    // Use hand_x to update the bar position
+                    update_bar(bar, hand_x);
+                }
+            }
         }
 
         // Update the floating ball
         update_floating_ball(floating_ball, bar, bricks);
 
-        // Draw the game frame
-        Mat game_frame;
-        draw_game(game_frame, floating_ball, bar, bricks);
+        // Draw the LED wall
+        draw_led_wall(led_wall, floating_ball, bar, bricks);
 
-        // Display the game frame
-        imshow("Brick Pong Game", game_frame);
+        // Display the LED wall simulation
+        imshow("LED PCB Wall Simulation", led_wall);
 
         // Exit the loop on 'q' key press
         if (waitKey(30) == 'q') break;
     }
 
-    // Release the camera and PoseNet
-    cap.release();
-    delete net;
+    // Close the named pipe
+    close(pipe_fd);
+
+    // Release the camera
     destroyAllWindows();
 
     return 0;
