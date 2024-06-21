@@ -178,16 +178,20 @@ int main(int argc, char** argv) {
         // Resize the frame to match the display resolution
         resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
 
+        // Convert frame to uchar3 for PoseNet processing
+        Mat frame_rgb;
+        cvtColor(frame, frame_rgb, COLOR_BGR2RGB);
+
         // Run PoseNet to detect hands
         std::vector<poseNet::ObjectPose> poses;
-        if (!net->Process(frame.data, frame.cols, frame.rows, poses)) {
+        if (!net->Process((uchar3*)frame_rgb.data, frame_rgb.cols, frame_rgb.rows, poses)) {
             printf("Error: PoseNet processing failed\n");
             continue;
         }
 
         // Update the bar based on the hand position
         if (!poses.empty() && !poses[0].Keypoints.empty()) {
-            float hand_x = poses[0].Keypoints[poseNet::HAND_WRIST].x;
+            float hand_x = poses[0].Keypoints[0].x; // Using Keypoint ID 0 for wrist
             update_bar(bar, hand_x);
         }
 
