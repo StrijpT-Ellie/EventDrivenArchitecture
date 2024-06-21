@@ -4,10 +4,16 @@
 #include <cmath>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sstream>
+#include <string>
 
+#define LED_WIDTH 20
+#define LED_HEIGHT 20
 #define DISPLAY_WIDTH 640
 #define DISPLAY_HEIGHT 480
-#define BAR_HEIGHT 20
+#define LED_SPACING 5
+#define MOVEMENT_THRESHOLD 30  // Threshold to detect movement
+#define BAR_HEIGHT 20  // Height of the bar at the bottom
 #define BRICK_ROWS 5
 #define BRICK_COLS 10
 #define BRICK_WIDTH (DISPLAY_WIDTH / BRICK_COLS)
@@ -44,7 +50,7 @@ void initialize_led_wall(Mat &led_wall) {
 
 void initialize_floating_ball(FloatingBall &ball) {
     ball.position = Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
-    ball.velocity = Point2f(5, 5);  // Adjusted velocity for better control
+    ball.velocity = Point2f(10, 10);  // Velocity of the ball
     ball.radius = 20;
     ball.color = Scalar(0, 0, 255);  // Red color
 }
@@ -116,8 +122,8 @@ void update_floating_ball(FloatingBall &ball, const Bar &bar, vector<Brick> &bri
     }
 }
 
-void update_bar(Bar &bar, float hand_x_position) {
-    bar.position.x = hand_x_position - bar.width / 2;
+void update_bar(Bar &bar, float hand_x) {
+    bar.position.x = hand_x - bar.width / 2;
 
     // Clamp the bar's position within the screen bounds
     if (bar.position.x < 0) bar.position.x = 0;
@@ -143,24 +149,21 @@ void draw_led_wall(Mat &led_wall, const FloatingBall &ball, const Bar &bar, cons
 }
 
 int main(int argc, char** argv) {
-    // Open the default camera
-    VideoCapture cap(0);
-    if (!cap.isOpened()) {
-        printf("Error: Could not open camera\n");
+    // Open the named pipe for reading
+    const char* pipePath = "/tmp/movement_pipe";
+    int pipe_fd = open(pipePath, O_RDONLY);
+    if (pipe_fd == -1) {
+        printf("Error: Could not open named pipe\n");
         return -1;
     }
 
-    // Set frame rate to reduce processing load
-    cap.set(CAP_PROP_FPS, 15);
-
-    // Create a window and resize it
-    namedWindow("LED PCB Wall Simulation", WINDOW_NORMAL);
-    resizeWindow("LED PCB Wall Simulation", DISPLAY_WIDTH, DISPLAY_HEIGHT);
-
+    // Initialize game elements
     Mat frame, prev_frame;
     FloatingBall floating_ball;
     Bar bar;
     vector<Brick> bricks;
+    int left_movement_intensity = 0;
+    int right_movement_intensity = 0;
 
     // Initialize the LED wall, floating ball, bar, and bricks
     Mat led_wall;
@@ -169,39 +172,26 @@ int main(int argc, char** argv) {
     initialize_bar(bar);
     initialize_bricks(bricks);
 
-    // Open the named pipe
-    int pipe_fd = open("/tmp/movement_pipe", O_RDONLY | O_NONBLOCK);
-    if (pipe_fd == -1) {
-        printf("Error: Could not open named pipe\n");
-        return -1;
-    }
-
     while (true) {
-        // Capture a new frame
-        cap >> frame;
-        if (frame.empty()) {
-            printf("Error: No captured frame\n");
-            break;
+        // Read from the named pipe
+        char buffer[256];
+        ssize_t bytesRead = read(pipe_fd, buffer, sizeof(buffer) - 1);
+        if (bytesRead > 0) {
+            buffer[bytesRead] = '\0';
+            float hand_x, hand_y;
+            std::istringstream iss(buffer);
+            std::string line;
+            while (std::getline(iss, line)) {
+                // Parse the coordinates from the line
+                if (sscanf(line.c_str(), "Pose %*d, Keypoint %*d: (%f, %f)", &hand_x, &hand_y) == 2) {
+                    // Use hand_x to update the bar position
+                    update_bar(bar, hand_x);
+                }
+            }
         }
-
-        // Resize the frame to match the LED PCB wall resolution
-        resize(frame, frame, Size(DISPLAY_WIDTH, DISPLAY_HEIGHT), 0, 0, INTER_LINEAR);
 
         // Update the floating ball
         update_floating_ball(floating_ball, bar, bricks);
-
-        // Read from the named pipe
-        char buffer[256];
-        ssize_t bytes_read = read(pipe_fd, buffer, sizeof(buffer) - 1);
-        if (bytes_read > 0) {
-            buffer[bytes_read] = '\0';
-            // Parse the coordinates from the buffer (example: "Pose 0, Keypoint 7: (123.4, 567.8)\n")
-            float hand_x = 0.0;
-            float hand_y = 0.0;
-            sscanf(buffer, "Pose %*d, Keypoint %*d: (%f, %f)", &hand_x, &hand_y);
-            // Update the bar based on hand position
-            update_bar(bar, hand_x);
-        }
 
         // Draw the LED wall
         draw_led_wall(led_wall, floating_ball, bar, bricks);
@@ -217,7 +207,6 @@ int main(int argc, char** argv) {
     close(pipe_fd);
 
     // Release the camera
-    cap.release();
     destroyAllWindows();
 
     return 0;
