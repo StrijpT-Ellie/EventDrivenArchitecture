@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sstream>
+#include <sys/stat.h> // Include for mkfifo
 
 bool signal_recieved = false;
 
@@ -88,7 +89,13 @@ int main(int argc, char** argv)
 
     const uint32_t overlayFlags = poseNet::OverlayFlagsFromStr(cmdLine.GetString("overlay", "links,keypoints"));
 
-    int pipe_fd = open("/tmp/movement_pipe", O_WRONLY | O_NONBLOCK);
+    /*
+     * create named pipe
+     */
+    const char* pipePath = "/tmp/movement_pipe";
+    mkfifo(pipePath, 0666);
+
+    int pipe_fd = open(pipePath, O_WRONLY | O_NONBLOCK);
     if (pipe_fd == -1) {
         LogError("my_posenet: failed to open named pipe\n");
         SAFE_DELETE(input);
