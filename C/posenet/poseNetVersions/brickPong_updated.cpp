@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sstream>
 #include <string>
+#include <iostream>
 
 #define LED_WIDTH 20
 #define LED_HEIGHT 20
@@ -182,10 +183,15 @@ int main(int argc, char** argv) {
             while (std::getline(iss, line)) {
                 // Parse the coordinates from the line
                 if (sscanf(line.c_str(), "Pose %*d, Keypoint %*d: (%f, %f)", &hand_x, &hand_y) == 2) {
+                    // Debugging: Print the hand coordinates
+                    cout << "Hand coordinates: (" << hand_x << ", " << hand_y << ")" << endl;
                     // Use hand_x to update the bar position
                     update_bar(bar, hand_x);
                 }
             }
+        } else {
+            // Debugging: Indicate no data was read
+            cout << "No data read from pipe" << endl;
         }
 
         // Update the floating ball
