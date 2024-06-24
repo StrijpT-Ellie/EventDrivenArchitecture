@@ -61,8 +61,11 @@ void initialize_food(vector<Particle> &food_particles) {
 
 void update_snake(Snake &snake, float hand_x, float hand_y, bool hand_detected, vector<Particle> &food_particles) {
     if (hand_detected) {
+        // Flip hand_x by mirroring it around the center of the display width
+        float inverted_hand_x = DISPLAY_WIDTH - hand_x;
+
         Point2f center(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2);
-        Point2f hand_position(hand_x, hand_y);
+        Point2f hand_position(inverted_hand_x, hand_y);
         Point2f direction = hand_position - center;
         float angle = atan2(direction.y, direction.x);
         snake.velocity.x = cos(angle) * 3;  // Speed of 3
