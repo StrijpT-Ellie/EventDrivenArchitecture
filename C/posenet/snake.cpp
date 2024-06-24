@@ -78,8 +78,8 @@ void update_snake(Snake &snake, float hand_x, bool hand_detected, vector<Particl
             snake.velocity.y = new_vy;
         }
     } else {
-        // Stop the snake's movement if no hand is detected
-        snake.velocity = Point2f(0, 0);
+        // Keep the snake's last known velocity if a hand is not detected
+        snake.velocity = snake.velocity;
     }
 
     // Update position
