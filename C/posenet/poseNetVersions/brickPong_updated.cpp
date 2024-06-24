@@ -124,7 +124,9 @@ void update_floating_ball(FloatingBall &ball, const Bar &bar, vector<Brick> &bri
 }
 
 void update_bar(Bar &bar, float hand_x) {
-    bar.position.x = hand_x - bar.width / 2;
+    // Invert hand_x by mirroring it around the center of the display width
+    float inverted_hand_x = DISPLAY_WIDTH - hand_x;
+    bar.position.x = inverted_hand_x - bar.width / 2;
 
     // Clamp the bar's position within the screen bounds
     if (bar.position.x < 0) bar.position.x = 0;
