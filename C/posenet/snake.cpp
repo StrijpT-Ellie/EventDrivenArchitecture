@@ -18,6 +18,7 @@
 #define NUM_FOOD_PARTICLES 10  // Number of food particles
 #define GRID_SIZE 20  // Size of each grid cell
 #define TURN_ANGLE CV_PI / 18  // Turn angle in radians
+#define FRAME_RATE 10  // Frame rate to reduce processing load
 
 using namespace cv;
 using namespace std;
@@ -119,7 +120,7 @@ void update_snake(Snake &snake, float hand_x, vector<Particle> &food_particles) 
 
 void draw_led_wall(Mat &led_wall, const Snake &snake, const vector<Particle> &food_particles) {
     // Clear the LED wall
-    led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
+    led_wall.setTo(Scalar(0, 0, 0));
 
     // Draw the grid
     for (int y = 0; y < DISPLAY_HEIGHT; y += GRID_SIZE) {
@@ -131,12 +132,12 @@ void draw_led_wall(Mat &led_wall, const Snake &snake, const vector<Particle> &fo
 
     // Draw the snake
     for (const auto &segment : snake.body) {
-        cv::circle(led_wall, segment, snake.radius, snake.color, FILLED);
+        circle(led_wall, segment, snake.radius, snake.color, FILLED);
     }
 
     // Draw the food particles
     for (const auto &food : food_particles) {
-        cv::circle(led_wall, food.position, food.radius, food.color, FILLED);
+        circle(led_wall, food.position, food.radius, food.color, FILLED);
     }
 }
 
@@ -149,16 +150,19 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Mat frame, prev_frame;
+    Mat frame;
     Snake snake;
     vector<Particle> food_particles;
     float hand_x = DISPLAY_WIDTH / 2;  // Initialize hand_x at the center
 
     // Initialize the LED wall, snake, and food particles
-    Mat led_wall;
+    Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
     initialize_led_wall(led_wall);
     initialize_snake(snake);
     initialize_food(food_particles);
+
+    // Set a lower frame rate to reduce processing load
+    int frame_delay = 1000 / FRAME_RATE;
 
     while (true) {
         // Read from the named pipe
@@ -188,7 +192,7 @@ int main(int argc, char** argv) {
         imshow("LED PCB Wall Simulation", led_wall);
 
         // Exit the loop on 'q' key press
-        if (waitKey(30) == 'q') break;
+        if (waitKey(frame_delay) == 'q') break;
     }
 
     // Close the named pipe
