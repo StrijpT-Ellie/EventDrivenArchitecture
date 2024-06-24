@@ -17,7 +17,7 @@
 #define LED_SPACING 5
 #define NUM_FOOD_PARTICLES 10  // Number of food particles
 #define GRID_SIZE 20  // Size of each grid cell
-#define SMOOTHING_FACTOR 0.1  // Adjust this value for smoother or faster transitions
+#define TURN_ANGLE CV_PI / 18  // Turn angle in radians
 
 using namespace cv;
 using namespace std;
@@ -42,7 +42,7 @@ void initialize_led_wall(Mat &led_wall) {
 
 void initialize_snake(Snake &snake) {
     snake.body.push_back(Point2f(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2));
-    snake.velocity = Point2f(3, 0);  // Initial velocity to the right
+    snake.velocity = Point2f(0, -3);  // Initial velocity upwards
     snake.radius = 10;
     snake.color = Scalar(0, 0, 255);  // Red color
     snake.segments_to_add = 0;  // Initialize with no segments to add
@@ -60,20 +60,24 @@ void initialize_food(vector<Particle> &food_particles) {
 }
 
 void update_snake(Snake &snake, float hand_x, vector<Particle> &food_particles) {
-    // Invert hand_x by mirroring it around the center of the display width
-    float inverted_hand_x = DISPLAY_WIDTH - hand_x;
-    float target_x = inverted_hand_x - snake.body[0].x;
-    
-    // Adjust direction based on hand position
-    float angle = target_x * SMOOTHING_FACTOR;
-    float new_vx = snake.velocity.x * cos(angle) - snake.velocity.y * sin(angle);
-    float new_vy = snake.velocity.x * sin(angle) + snake.velocity.y * cos(angle);
-    snake.velocity.x = new_vx;
-    snake.velocity.y = new_vy;
+    // Determine direction based on hand position relative to the center of the screen
+    if (hand_x > DISPLAY_WIDTH / 2) {
+        // Turn right
+        float new_vx = snake.velocity.x * cos(TURN_ANGLE) - snake.velocity.y * sin(TURN_ANGLE);
+        float new_vy = snake.velocity.x * sin(TURN_ANGLE) + snake.velocity.y * cos(TURN_ANGLE);
+        snake.velocity.x = new_vx;
+        snake.velocity.y = new_vy;
+    } else {
+        // Turn left
+        float new_vx = snake.velocity.x * cos(-TURN_ANGLE) - snake.velocity.y * sin(-TURN_ANGLE);
+        float new_vy = snake.velocity.x * sin(-TURN_ANGLE) + snake.velocity.y * cos(-TURN_ANGLE);
+        snake.velocity.x = new_vx;
+        snake.velocity.y = new_vy;
+    }
 
     // Update position
     Point2f new_head_position = snake.body[0] + snake.velocity;
-    
+
     // Check for collisions with the edges of the display
     if (new_head_position.x - snake.radius < 0) {
         new_head_position.x = snake.radius;
