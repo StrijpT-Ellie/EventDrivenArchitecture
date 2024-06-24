@@ -60,20 +60,26 @@ void initialize_food(vector<Particle> &food_particles) {
     }
 }
 
-void update_snake(Snake &snake, float hand_x, vector<Particle> &food_particles) {
-    // Determine direction based on hand position relative to the center of the screen
-    if (hand_x > DISPLAY_WIDTH / 2) {
-        // Turn right
-        float new_vx = snake.velocity.x * cos(TURN_ANGLE) - snake.velocity.y * sin(TURN_ANGLE);
-        float new_vy = snake.velocity.x * sin(TURN_ANGLE) + snake.velocity.y * cos(TURN_ANGLE);
-        snake.velocity.x = new_vx;
-        snake.velocity.y = new_vy;
+void update_snake(Snake &snake, float hand_x, bool hand_detected, vector<Particle> &food_particles) {
+    // Only update the snake's direction if a hand is detected
+    if (hand_detected) {
+        // Determine direction based on hand position relative to the center of the screen
+        if (hand_x > DISPLAY_WIDTH / 2) {
+            // Turn right
+            float new_vx = snake.velocity.x * cos(TURN_ANGLE) - snake.velocity.y * sin(TURN_ANGLE);
+            float new_vy = snake.velocity.x * sin(TURN_ANGLE) + snake.velocity.y * cos(TURN_ANGLE);
+            snake.velocity.x = new_vx;
+            snake.velocity.y = new_vy;
+        } else {
+            // Turn left
+            float new_vx = snake.velocity.x * cos(-TURN_ANGLE) - snake.velocity.y * sin(-TURN_ANGLE);
+            float new_vy = snake.velocity.x * sin(-TURN_ANGLE) + snake.velocity.y * cos(-TURN_ANGLE);
+            snake.velocity.x = new_vx;
+            snake.velocity.y = new_vy;
+        }
     } else {
-        // Turn left
-        float new_vx = snake.velocity.x * cos(-TURN_ANGLE) - snake.velocity.y * sin(-TURN_ANGLE);
-        float new_vy = snake.velocity.x * sin(-TURN_ANGLE) + snake.velocity.y * cos(-TURN_ANGLE);
-        snake.velocity.x = new_vx;
-        snake.velocity.y = new_vy;
+        // Stop the snake's movement if no hand is detected
+        snake.velocity = Point2f(0, 0);
     }
 
     // Update position
@@ -154,6 +160,7 @@ int main(int argc, char** argv) {
     Snake snake;
     vector<Particle> food_particles;
     float hand_x = DISPLAY_WIDTH / 2;  // Initialize hand_x at the center
+    bool hand_detected = false;  // Flag to indicate if a hand is detected
 
     // Initialize the LED wall, snake, and food particles
     Mat led_wall(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
@@ -176,14 +183,19 @@ int main(int argc, char** argv) {
             while (std::getline(iss, line)) {
                 // Parse the coordinates from the line
                 if (sscanf(line.c_str(), "Pose %*d, Keypoint %*d: (%f, %f)", &hand_x, &hand_y) == 2) {
+                    // Hand detected
+                    hand_detected = true;
                     // Debugging: Print the hand coordinates
                     cout << "Hand coordinates: (" << hand_x << ", " << hand_y << ")" << endl;
                 }
             }
+        } else {
+            // No hand detected
+            hand_detected = false;
         }
 
         // Update the snake based on hand_x and check for food collisions
-        update_snake(snake, hand_x, food_particles);
+        update_snake(snake, hand_x, hand_detected, food_particles);
 
         // Draw the LED wall
         draw_led_wall(led_wall, snake, food_particles);
