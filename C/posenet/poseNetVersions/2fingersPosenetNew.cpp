@@ -5,14 +5,17 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sstream>
+#include <string>
+#include <vector>
+#include <cmath>
 
-bool signal_recieved = false;
+bool signal_received = false;
 
 void sig_handler(int signo)
 {
     if (signo == SIGINT) {
         LogVerbose("received SIGINT\n");
-        signal_recieved = true;
+        signal_received = true;
     }
 }
 
@@ -37,18 +40,20 @@ int usage()
 bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses)
 {
     for (const auto& pose : poses) {
-        // Assuming keypoint IDs for fingertips are known, e.g., 8 (index fingertip) and 12 (middle fingertip)
-        int index_fingertip = pose.FindKeypoint(8);
-        int middle_fingertip = pose.FindKeypoint(12);
+        int index_fingertip = pose.FindKeypoint(8);  // index_finger_4
+        int middle_fingertip = pose.FindKeypoint(12);  // middle_finger_4
+        int palm = pose.FindKeypoint(0);  // palm
 
-        if (index_fingertip >= 0 && middle_fingertip >= 0) {
+        if (index_fingertip >= 0 && middle_fingertip >= 0 && palm >= 0) {
             const auto& kp_index = pose.Keypoints[index_fingertip];
             const auto& kp_middle = pose.Keypoints[middle_fingertip];
+            const auto& kp_palm = pose.Keypoints[palm];
 
-            // Simple distance check for a two-finger gesture
-            float distance = sqrt(pow(kp_index.x - kp_middle.x, 2) + pow(kp_index.y - kp_middle.y, 2));
-            if (distance > 20 && distance < 60) { // Example thresholds, adjust as necessary
-                return true;
+            if (kp_index.y < kp_palm.y && kp_middle.y < kp_palm.y) {
+                float distance = sqrt(pow(kp_index.x - kp_middle.x, 2) + pow(kp_index.y - kp_middle.y, 2));
+                if (distance > 30 && distance < 80) {  // Example thresholds, adjust as necessary
+                    return true;
+                }
             }
         }
     }
@@ -97,7 +102,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    while (!signal_recieved) {
+    while (!signal_received) {
         uchar3* image = NULL;
         int status = 0;
 
@@ -113,8 +118,6 @@ int main(int argc, char** argv)
             LogError("my_posenet: failed to process frame\n");
             continue;
         }
-
-        LogInfo("my_posenet: detected %zu %s(s)\n", poses.size(), net->GetCategory());
 
         if (detect_two_fingers(poses)) {
             std::ostringstream oss;
@@ -140,14 +143,9 @@ int main(int argc, char** argv)
         net->PrintProfilerTimes();
     }
 
-    LogVerbose("my_posenet: shutting down...\n");
-
     SAFE_DELETE(input);
     SAFE_DELETE(output);
     SAFE_DELETE(net);
-
     close(pipe_fd);
-
-    LogVerbose("my_posenet: shutdown complete.\n");
     return 0;
 }
