@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     }
 
     // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
         std::cerr << "Error: Could not initialize SDL" << std::endl;
         return -1;
     }
