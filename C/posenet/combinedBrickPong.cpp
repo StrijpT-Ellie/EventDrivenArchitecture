@@ -1,4 +1,3 @@
-
 #include "videoSource.h"
 #include "videoOutput.h"
 #include "poseNet.h"
@@ -16,6 +15,10 @@
 #define PADDLE_HEIGHT 20
 #define BALL_SIZE 10
 #define FRAME_RATE 60  // Target frame rate
+#define BRICK_ROWS 5
+#define BRICK_COLS 10
+#define BRICK_WIDTH (WINDOW_WIDTH / BRICK_COLS)
+#define BRICK_HEIGHT 20
 
 bool signal_received = false;
 
@@ -53,6 +56,21 @@ struct Paddle {
     float x, y;
 };
 
+struct Brick {
+    float x, y;
+    bool active;
+};
+
+void initialize_bricks(std::vector<Brick>& bricks) {
+    bricks.clear();
+    for (int i = 0; i < BRICK_ROWS; ++i) {
+        for (int j = 0; j < BRICK_COLS; ++j) {
+            Brick brick = { j * BRICK_WIDTH, i * BRICK_HEIGHT, true };
+            bricks.push_back(brick);
+        }
+    }
+}
+
 void update_paddle(Paddle &paddle, float hand_x) {
     // Flip hand_x by mirroring it around the center of the display width
     float inverted_hand_x = WINDOW_WIDTH - hand_x;
@@ -63,7 +81,7 @@ void update_paddle(Paddle &paddle, float hand_x) {
     if (paddle.x + PADDLE_WIDTH > WINDOW_WIDTH) paddle.x = WINDOW_WIDTH - PADDLE_WIDTH;
 }
 
-void update_ball(Ball &ball, const Paddle &paddle) {
+void update_ball(Ball &ball, const Paddle &paddle, std::vector<Brick>& bricks) {
     ball.x += ball.vx;
     ball.y += ball.vy;
 
@@ -81,13 +99,24 @@ void update_ball(Ball &ball, const Paddle &paddle) {
         ball.y = paddle.y - BALL_SIZE; // Move ball above the paddle
     }
 
+    // Check for collisions with bricks
+    for (auto& brick : bricks) {
+        if (brick.active &&
+            ball.x + BALL_SIZE > brick.x && ball.x < brick.x + BRICK_WIDTH &&
+            ball.y + BALL_SIZE > brick.y && ball.y < brick.y + BRICK_HEIGHT) {
+            ball.vy = -ball.vy; // Bounce vertically
+            brick.active = false; // Deactivate the brick
+            break;
+        }
+    }
+
     // Check for bottom collision (game over)
     if (ball.y + BALL_SIZE > WINDOW_HEIGHT) {
         // Reset ball position and velocity
         ball.x = WINDOW_WIDTH / 2;
         ball.y = WINDOW_HEIGHT / 2;
-        ball.vx = 2;
-        ball.vy = 2;
+        ball.vx = 4;  // Increased velocity
+        ball.vy = 4;  // Increased velocity
     }
 }
 
@@ -176,9 +205,11 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Ball ball = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 2, 2};
+    Ball ball = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 4, 4};  // Increased initial velocities
     Paddle paddle = {WINDOW_WIDTH / 2 - PADDLE_WIDTH / 2, WINDOW_HEIGHT - PADDLE_HEIGHT};
     float hand_x = WINDOW_WIDTH / 2;
+    std::vector<Brick> bricks;
+    initialize_bricks(bricks);
 
     bool quit = false;
     SDL_Event e;
@@ -211,7 +242,7 @@ int main(int argc, char** argv) {
             LogError("my_posenet: failed to process frame\n");
             continue;
         }
-
+        
         // Detect the gesture and update hand_x
         if (detect_two_fingers(poses, hand_x)) {
             // Debugging: Print the hand coordinates
@@ -220,7 +251,7 @@ int main(int argc, char** argv) {
 
         // Update game objects
         update_paddle(paddle, hand_x);
-        update_ball(ball, paddle);
+        update_ball(ball, paddle, bricks);
 
         // Clear screen
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -235,6 +266,15 @@ int main(int argc, char** argv) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
         SDL_Rect ball_rect = {(int)ball.x, (int)ball.y, BALL_SIZE, BALL_SIZE};
         SDL_RenderFillRect(renderer, &ball_rect);
+
+        // Draw bricks
+        for (const auto& brick : bricks) {
+            if (brick.active) {
+                SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+                SDL_Rect brick_rect = {(int)brick.x, (int)brick.y, BRICK_WIDTH, BRICK_HEIGHT};
+                SDL_RenderFillRect(renderer, &brick_rect);
+            }
+        }
 
         // Update screen
         SDL_RenderPresent(renderer);
@@ -256,4 +296,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
