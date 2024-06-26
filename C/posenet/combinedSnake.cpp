@@ -57,11 +57,12 @@ void initialize_food(std::vector<Particle> &food_particles) {
 
 void update_snake(Snake &snake, float hand_x, float hand_y, bool hand_detected, std::vector<Particle> &food_particles) {
     if (hand_detected) {
-        // Flip hand_x by mirroring it around the center of the display width
-        float inverted_hand_x = WINDOW_WIDTH - hand_x;
+        // Normalize hand_x to be within the display width range
+        float normalized_hand_x = (hand_x / 1280.0f) * WINDOW_WIDTH;  // Assuming the input resolution is 1280x720
+        float normalized_hand_y = (hand_y / 720.0f) * WINDOW_HEIGHT;
 
         SDL_Point center = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2};
-        SDL_Point hand_position = {static_cast<int>(inverted_hand_x), static_cast<int>(hand_y)};
+        SDL_Point hand_position = {static_cast<int>(normalized_hand_x), static_cast<int>(normalized_hand_y)};
         SDL_Point direction = {hand_position.x - center.x, hand_position.y - center.y};
 
         float angle = atan2(direction.y, direction.x);
