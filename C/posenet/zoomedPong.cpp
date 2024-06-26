@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <opencv2/opencv.hpp>  // Include OpenCV headers
 
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
@@ -65,7 +66,7 @@ void initialize_bricks(std::vector<Brick>& bricks) {
     bricks.clear();
     for (int row = 0; row < BRICK_ROWS; ++row) {
         for (int col = 0; col < BRICK_COLS; ++col) {
-            bricks.push_back(Brick{col * BRICK_WIDTH, row * BRICK_HEIGHT, true});
+            bricks.push_back(Brick{static_cast<float>(col * BRICK_WIDTH), static_cast<float>(row * BRICK_HEIGHT), true});
         }
     }
 }
