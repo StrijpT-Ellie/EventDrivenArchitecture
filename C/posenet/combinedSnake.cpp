@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <opencv2/opencv.hpp>  // Include OpenCV headers
 
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
@@ -122,6 +123,29 @@ void draw_food(SDL_Renderer* renderer, const std::vector<Particle> &food_particl
         SDL_Rect rect = { static_cast<int>(food.x), static_cast<int>(food.y), GRID_SIZE, GRID_SIZE };
         SDL_RenderFillRect(renderer, &rect);
     }
+}
+
+bool detect_hand(const std::vector<poseNet::ObjectPose>& poses, float &hand_x, float &hand_y) {
+    for (const auto& pose : poses) {
+        int index_fingertip = pose.FindKeypoint(8);  // index_finger_4
+        int middle_fingertip = pose.FindKeypoint(12);  // middle_finger_4
+        int palm = pose.FindKeypoint(0);  // palm
+
+        if (index_fingertip >= 0 && middle_fingertip >= 0 && palm >= 0) {
+            const auto& kp_index = pose.Keypoints[index_fingertip];
+            const auto& kp_middle = pose.Keypoints[middle_fingertip];
+            const auto& kp_palm = pose.Keypoints[palm];
+
+            // Log the coordinates if the keypoints are detected
+            std::cout << "Index finger: (" << kp_index.x << ", " << kp_index.y << ")" << std::endl;
+            std::cout << "Middle finger: (" << kp_middle.x << ", " << kp_middle.y << ")" << std::endl;
+
+            hand_x = kp_index.x;  // Use the x-coordinate of the index fingertip for control
+            hand_y = kp_index.y;  // Use the y-coordinate of the index fingertip for control
+            return true;
+        }
+    }
+    return false;
 }
 
 bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &hand_x, float &hand_y) {
@@ -255,8 +279,14 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        // Detect the hand and log the keypoints
+        hand_detected = detect_hand(poses, hand_x, hand_y);
+
         // Detect the two-finger gesture and update hand_x and hand_y for snake movement
-        hand_detected = detect_two_fingers(poses, hand_x, hand_y);
+        if (detect_two_fingers(poses, hand_x, hand_y)) {
+            // Debugging: Print the hand coordinates for the gesture
+            std::cout << "Hand coordinates for gesture: (" << hand_x << ", " << hand_y << ")" << std::endl;
+        }
 
         // Update the snake based on hand coordinates and check for food collisions
         update_snake(snake, hand_x, hand_y, hand_detected, food_particles);
