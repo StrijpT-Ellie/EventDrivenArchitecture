@@ -39,15 +39,17 @@ struct Snake {
 };
 
 void initialize_snake(Snake &snake) {
+    snake.body.clear();
     snake.body.push_back({WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2});
     snake.velocity = {0, -GRID_SIZE};  // Initial velocity upwards
     snake.radius = GRID_SIZE / 2;
     snake.segments_to_add = 0;
 }
 
-void initialize_food(std::vector<Particle> &food_particles) {
+void initialize_food(std::vector<Particle> &food_particles, int quantity) {
+    food_particles.clear();
     srand(time(0));
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < quantity; ++i) {
         Particle food;
         food.x = rand() % (WINDOW_WIDTH / GRID_SIZE) * GRID_SIZE;
         food.y = rand() % (WINDOW_HEIGHT / GRID_SIZE) * GRID_SIZE;
@@ -238,7 +240,7 @@ int main(int argc, char** argv) {
     initialize_snake(snake);
 
     std::vector<Particle> food_particles;
-    initialize_food(food_particles);
+    initialize_food(food_particles, 10); // Set initial quantity of food particles to 10
 
     float hand_x = WINDOW_WIDTH / 2;  // Initialize hand_x at the center
     float hand_y = WINDOW_HEIGHT / 2;  // Initialize hand_y at the center
@@ -290,6 +292,12 @@ int main(int argc, char** argv) {
 
         // Update the snake based on hand coordinates and check for food collisions
         update_snake(snake, hand_x, hand_y, hand_detected, food_particles);
+
+        // Check if all food particles are eaten
+        if (food_particles.empty()) {
+            initialize_snake(snake);
+            initialize_food(food_particles, 10); // Reset quantity of food particles to 10
+        }
 
         // Clear screen
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
