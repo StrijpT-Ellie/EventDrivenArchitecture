@@ -64,7 +64,7 @@ void update_snake(Snake &snake, float hand_x, float hand_y, bool hand_detected, 
 
         SDL_Point head_position = snake.body[0];
         SDL_Point hand_position = {static_cast<int>(normalized_hand_x), static_cast<int>(normalized_hand_y)};
-        SDL_Point direction = {hand_position.x - head_position.x, hand_position.y - head_position.y};
+        SDL_Point direction = {head_position.x - hand_position.x, head_position.y - hand_position.y}; // Flip direction
 
         if (abs(direction.x) > abs(direction.y)) {
             // Move horizontally
