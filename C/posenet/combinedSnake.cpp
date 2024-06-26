@@ -164,6 +164,13 @@ bool detect_hand(const std::vector<poseNet::ObjectPose>& poses, float &hand_x, f
     return false;
 }
 
+void sig_handler(int signo) {
+    if (signo == SIGINT) {
+        printf("received SIGINT\n");
+        signal_received = true;
+    }
+}
+
 int main(int argc, char** argv) {
     // PoseNet setup
     commandLine cmdLine(argc, argv);
