@@ -58,13 +58,13 @@ void initialize_food(std::vector<Particle> &food_particles) {
 
 void update_snake(Snake &snake, float hand_x, float hand_y, bool hand_detected, std::vector<Particle> &food_particles) {
     if (hand_detected) {
-        // Normalize hand_x and hand_y to be within the display range
-        float normalized_hand_x = (hand_x / 1280.0f) * WINDOW_WIDTH;  // Assuming the input resolution is 1280x720
+        // Normalize and flip hand_x and hand_y to be within the display range
+        float normalized_hand_x = WINDOW_WIDTH - (hand_x / 1280.0f) * WINDOW_WIDTH;  // Assuming the input resolution is 1280x720
         float normalized_hand_y = (hand_y / 720.0f) * WINDOW_HEIGHT;
 
         SDL_Point head_position = snake.body[0];
         SDL_Point hand_position = {static_cast<int>(normalized_hand_x), static_cast<int>(normalized_hand_y)};
-        SDL_Point direction = {head_position.x - hand_position.x, head_position.y - hand_position.y}; // Flip direction
+        SDL_Point direction = {hand_position.x - head_position.x, hand_position.y - head_position.y};
 
         if (abs(direction.x) > abs(direction.y)) {
             // Move horizontally
