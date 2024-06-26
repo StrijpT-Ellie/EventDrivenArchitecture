@@ -127,7 +127,7 @@ void update_ball(Ball &ball, const Paddle &paddle, std::vector<Brick>& bricks) {
     }
 }
 
-bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &hand_x) {
+bool detect_hand(const std::vector<poseNet::ObjectPose>& poses, float &hand_x) {
     for (const auto& pose : poses) {
         int index_fingertip = pose.FindKeypoint(8);  // index_finger_4
         int middle_fingertip = pose.FindKeypoint(12);  // middle_finger_4
@@ -141,6 +141,24 @@ bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &ha
             // Log the coordinates if the keypoints are detected
             std::cout << "Index finger: (" << kp_index.x << ", " << kp_index.y << ")" << std::endl;
             std::cout << "Middle finger: (" << kp_middle.x << ", " << kp_middle.y << ")" << std::endl;
+
+            hand_x = kp_index.x;  // Use the x-coordinate of the index fingertip for control
+            return true;
+        }
+    }
+    return false;
+}
+
+bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &hand_x) {
+    for (const auto& pose : poses) {
+        int index_fingertip = pose.FindKeypoint(8);  // index_finger_4
+        int middle_fingertip = pose.FindKeypoint(12);  // middle_finger_4
+        int palm = pose.FindKeypoint(0);  // palm
+
+        if (index_fingertip >= 0 && middle_fingertip >= 0 && palm >= 0) {
+            const auto& kp_index = pose.Keypoints[index_fingertip];
+            const auto& kp_middle = pose.Keypoints[middle_fingertip];
+            const auto& kp_palm = pose.Keypoints[palm];
 
             if (kp_index.y < kp_palm.y && kp_middle.y < kp_palm.y) {
                 float distance = sqrt(pow(kp_index.x - kp_middle.x, 2) + pow(kp_index.y - kp_middle.y, 2));
@@ -283,9 +301,12 @@ int main(int argc, char** argv) {
             continue;
         }
 
-        // Detect the gesture and update hand_x
+        // Detect the hand and log the keypoints
+        bool hand_detected = detect_hand(poses, hand_x);
+
+        // Detect the two-finger gesture and update hand_x for paddle movement
         if (detect_two_fingers(poses, hand_x)) {
-            // Debugging: Print the hand coordinates
+            // Debugging: Print the hand coordinates for the gesture
             std::cout << "Hand coordinates for gesture: (" << hand_x << ")" << std::endl;
         }
 
@@ -293,7 +314,9 @@ int main(int argc, char** argv) {
         cv::Mat inputMat(frameHeight, frameWidth, CV_8UC3, image);
 
         // Update game objects
-        update_paddle(paddle, hand_x);
+        if (hand_detected) {
+            update_paddle(paddle, hand_x);
+        }
         update_ball(ball, paddle, bricks);
 
         // Clear screen
