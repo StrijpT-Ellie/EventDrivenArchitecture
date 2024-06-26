@@ -144,7 +144,7 @@ bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &ha
                     hand_x = kp_index.x;  // Use the x-coordinate of the index fingertip for control
 
                     // Calculate crop area around the detected hand
-                    int margin = 50;
+                    int margin = 100;  // Increased margin for zooming
                     crop_x = std::max(0, (int)kp_index.x - margin);
                     crop_y = std::max(0, (int)kp_index.y - margin);
                     crop_width = std::min(frameWidth - crop_x, 2 * margin);
