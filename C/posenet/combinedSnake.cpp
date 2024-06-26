@@ -1,14 +1,11 @@
 #include "videoSource.h"
 #include "videoOutput.h"
 #include "poseNet.h"
-#include <SDL2/SDL.h>
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
-#include <fcntl.h>
-#include <unistd.h>
 #include <sstream>
 #include <string>
 #include <iostream>
@@ -39,6 +36,15 @@ struct Snake {
     Scalar color;
     int segments_to_add; // Number of segments to add when a particle is eaten
 };
+
+bool signal_received = false;
+
+void sig_handler(int signo) {
+    if (signo == SIGINT) {
+        printf("received SIGINT\n");
+        signal_received = true;
+    }
+}
 
 void initialize_led_wall(Mat &led_wall) {
     led_wall = Mat::zeros(DISPLAY_HEIGHT, DISPLAY_WIDTH, CV_8UC3);
@@ -164,13 +170,6 @@ bool detect_hand(const std::vector<poseNet::ObjectPose>& poses, float &hand_x, f
     return false;
 }
 
-void sig_handler(int signo) {
-    if (signo == SIGINT) {
-        printf("received SIGINT\n");
-        signal_received = true;
-    }
-}
-
 int main(int argc, char** argv) {
     // PoseNet setup
     commandLine cmdLine(argc, argv);
@@ -220,7 +219,7 @@ int main(int argc, char** argv) {
     // Set a lower frame rate to reduce processing load
     int frame_delay = 1000 / FRAME_RATE;
 
-    while (true) {
+    while (!quit && !signal_received) {
         uchar3* image = NULL;
         int status = 0;
 
