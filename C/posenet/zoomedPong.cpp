@@ -219,6 +219,32 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    // Create second window to display PoseNet input
+    SDL_Window* poseNetWindow = SDL_CreateWindow("PoseNet Input", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+    if (!poseNetWindow) {
+        LogError("Error: Could not create PoseNet SDL window\n");
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SAFE_DELETE(input);
+        SAFE_DELETE(output);
+        SAFE_DELETE(net);
+        SDL_Quit();
+        return -1;
+    }
+
+    SDL_Renderer* poseNetRenderer = SDL_CreateRenderer(poseNetWindow, -1, SDL_RENDERER_ACCELERATED);
+    if (!poseNetRenderer) {
+        LogError("Error: Could not create PoseNet SDL renderer\n");
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_DestroyWindow(poseNetWindow);
+        SAFE_DELETE(input);
+        SAFE_DELETE(output);
+        SAFE_DELETE(net);
+        SDL_Quit();
+        return -1;
+    }
+
     Ball ball = {WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2, 4, 4};  // Increased speed
     Paddle paddle = {WINDOW_WIDTH / 2 - PADDLE_WIDTH / 2, WINDOW_HEIGHT - PADDLE_HEIGHT};
     float hand_x = WINDOW_WIDTH / 2;
@@ -303,6 +329,17 @@ int main(int argc, char** argv) {
         // Update screen
         SDL_RenderPresent(renderer);
 
+        // Display the PoseNet input in the second window
+        SDL_Surface* poseNetSurface = SDL_CreateRGBSurfaceFrom(croppedImage.data, frameWidth, frameHeight, 24, croppedImage.step, 0xff0000, 0x00ff00, 0x0000ff, 0);
+        SDL_Texture* poseNetTexture = SDL_CreateTextureFromSurface(poseNetRenderer, poseNetSurface);
+        SDL_FreeSurface(poseNetSurface);
+
+        SDL_RenderClear(poseNetRenderer);
+        SDL_RenderCopy(poseNetRenderer, poseNetTexture, NULL, NULL);
+        SDL_RenderPresent(poseNetRenderer);
+
+        SDL_DestroyTexture(poseNetTexture);
+
         // Frame delay
         Uint32 frame_time = SDL_GetTicks() - frame_start;
         if (frame_delay > frame_time) {
@@ -313,6 +350,8 @@ int main(int argc, char** argv) {
     // Clean up
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(poseNetRenderer);
+    SDL_DestroyWindow(poseNetWindow);
     SAFE_DELETE(input);
     SAFE_DELETE(output);
     SAFE_DELETE(net);
