@@ -127,7 +127,7 @@ void update_ball(Ball &ball, const Paddle &paddle, std::vector<Brick>& bricks) {
     }
 }
 
-bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &hand_x, int frameWidth, int frameHeight, int& crop_x, int& crop_y, int& crop_width, int& crop_height) {
+bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &hand_x) {
     for (const auto& pose : poses) {
         int index_fingertip = pose.FindKeypoint(8);  // index_finger_4
         int middle_fingertip = pose.FindKeypoint(12);  // middle_finger_4
@@ -138,17 +138,14 @@ bool detect_two_fingers(const std::vector<poseNet::ObjectPose>& poses, float &ha
             const auto& kp_middle = pose.Keypoints[middle_fingertip];
             const auto& kp_palm = pose.Keypoints[palm];
 
+            // Log the coordinates if the keypoints are detected
+            std::cout << "Index finger: (" << kp_index.x << ", " << kp_index.y << ")" << std::endl;
+            std::cout << "Middle finger: (" << kp_middle.x << ", " << kp_middle.y << ")" << std::endl;
+
             if (kp_index.y < kp_palm.y && kp_middle.y < kp_palm.y) {
                 float distance = sqrt(pow(kp_index.x - kp_middle.x, 2) + pow(kp_index.y - kp_middle.y, 2));
                 if (distance > 30 && distance < 80) {  // Example thresholds, adjust as necessary
                     hand_x = kp_index.x;  // Use the x-coordinate of the index fingertip for control
-
-                    // Calculate crop area around the detected hand
-                    int margin = 100;  // Increased margin for zooming
-                    crop_x = std::max(0, (int)kp_index.x - margin);
-                    crop_y = std::max(0, (int)kp_index.y - margin);
-                    crop_width = std::min(frameWidth - crop_x, 2 * margin);
-                    crop_height = std::min(frameHeight - crop_y, 2 * margin);
                     return true;
                 }
             }
@@ -279,7 +276,6 @@ int main(int argc, char** argv) {
 
         int frameWidth = input->GetWidth();
         int frameHeight = input->GetHeight();
-        int crop_x = 0, crop_y = 0, crop_width = frameWidth, crop_height = frameHeight;
 
         std::vector<poseNet::ObjectPose> poses;
         if (!net->Process(image, frameWidth, frameHeight, poses, overlayFlags)) {
@@ -288,16 +284,13 @@ int main(int argc, char** argv) {
         }
 
         // Detect the gesture and update hand_x
-        if (detect_two_fingers(poses, hand_x, frameWidth, frameHeight, crop_x, crop_y, crop_width, crop_height)) {
+        if (detect_two_fingers(poses, hand_x)) {
             // Debugging: Print the hand coordinates
-            std::cout << "Hand coordinates: (" << hand_x << ")" << std::endl;
+            std::cout << "Hand coordinates for gesture: (" << hand_x << ")" << std::endl;
         }
 
-        // Crop and resize the region of interest
+        // Convert captured image to OpenCV format for display in second window
         cv::Mat inputMat(frameHeight, frameWidth, CV_8UC3, image);
-        cv::Rect cropRegion(crop_x, crop_y, crop_width, crop_height);
-        cv::Mat croppedImage = inputMat(cropRegion);
-        cv::resize(croppedImage, croppedImage, cv::Size(frameWidth, frameHeight));
 
         // Update game objects
         update_paddle(paddle, hand_x);
@@ -330,7 +323,7 @@ int main(int argc, char** argv) {
         SDL_RenderPresent(renderer);
 
         // Display the PoseNet input in the second window
-        SDL_Surface* poseNetSurface = SDL_CreateRGBSurfaceFrom(croppedImage.data, frameWidth, frameHeight, 24, croppedImage.step, 0xff0000, 0x00ff00, 0x0000ff, 0);
+        SDL_Surface* poseNetSurface = SDL_CreateRGBSurfaceFrom(inputMat.data, frameWidth, frameHeight, 24, inputMat.step, 0xff0000, 0x00ff00, 0x0000ff, 0);
         SDL_Texture* poseNetTexture = SDL_CreateTextureFromSurface(poseNetRenderer, poseNetSurface);
         SDL_FreeSurface(poseNetSurface);
 
