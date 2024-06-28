@@ -66,10 +66,14 @@ chmod +x masterScript_3modes
 1. **Run the master script**:
 
 ```sh
-./masterScript_3modes ./arrayNoVideo ./fadingPixels ./rippleEffect ./video2Array_noFlickering ./gameSelector
+./masterScript_3modes ./optimisedRipplePixels ./arrayNoVideo ./fadingPixels ./video2Array_noFlickering
 ```
 
-or
+or ./gameSelector2
+
+gameSelector2.cpp launches game selector which allows to select a game 
+Move hands on the left or right side of the screen for 6 sec to select 
+It counts intensive movement on one side of the screen
 
 2. **Monitor the named pipe in real-time** (optional, for debugging):
 
@@ -106,6 +110,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-gameSelector2.cpp launches game selector which allows to select a game 
-Move hands on the left or right side of the screen for 6 sec to select 
-It counts intensive movement on one side of the screen
+
