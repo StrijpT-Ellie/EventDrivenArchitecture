@@ -1,5 +1,7 @@
 # EventDrivenArchitecture
 
+Repo deprecated. Current: https://github.com/Krasnomakov/EventDrivenArchitecture/tree/main 
+
 ## Overview
 This repository contains prototypes and components of an AI event-driven architecture for controlling an LED 8-bit screen. The project includes several modes such as animations, drawing, games, and interactions with large language models (LLMs).
 
