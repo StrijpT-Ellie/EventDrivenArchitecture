@@ -11,6 +11,33 @@ contourwall_cpp/
 ├── contourwall.hpp
 └── main.cpp
 
+
+./ContourWallCPP
+
+Additional steps to compile Rust library on Jetson Nano
+
+sudo apt-get update
+sudo apt-get install libudev-dev
+
+sudo find /usr -name libudev.pc
+>> /usr/lib/aarch64-linux-gnu/pkgconfig/libudev.pc
+
+cd ~/home/jetson
+ls -a 
+nano .bashrc
+
+Add line: 
+export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig/libudev.pc
+
+…
+
+cd cw-core
+cargo build –release
+
+---
+
+CmakeLists file for testing
+
 cmake_minimum_required(VERSION 3.10)
 project(ContourWallCPP)
 
@@ -36,4 +63,3 @@ mkdir build
 cd build
 cmake ..
 make
-./ContourWallCPP

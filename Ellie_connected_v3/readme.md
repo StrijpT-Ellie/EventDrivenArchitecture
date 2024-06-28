@@ -1,8 +1,7 @@
-This folder contains attempts to implement event-driven architecture 
+This folder contains Event-Driven Architecture prototypes and relevant components realised with Python. 
 
-A working prototype is in masterCounter.py with MobileNet 
-And an OOP optimised version in masterCounter_OOP.py
+modeSelection - event-driven master script: animation, mode selection with number of fingers recognition, brick pong
 
-----
+brickPongVersions - contains various attempts to optimise Python code with CuPy, Numba and other methods to make it run efficiently on Jetson (not possible to use with CUDA 10.02 which is max for Jetson Nano 2GB/4GB)
 
-Better and final version without MobileNet is in modeSelection directory
+versions - partial implementations of event-driven architecture (e.g. animation to mode selection)
