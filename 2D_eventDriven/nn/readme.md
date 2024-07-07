@@ -1,1 +1,0 @@
-This folder contains simple example to generate patterns, control elements in array with numpy.

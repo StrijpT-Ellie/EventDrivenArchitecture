@@ -2,6 +2,9 @@
 
 This repository contains a master script that manages and switches between two motion detection scripts (`arrayNoVideo` and `fadingPixels`) based on detected movement. If no movement is detected for a certain period, the master script will switch between the two scripts.
 
+**Demo:** https://drive.google.com/file/d/1IVOBHTk2JU5LjdZWM55VMYE9VPgmm1oh/view?usp=sharing 
+
+
 ## Components
 
 1. **Master Script (`masterScript_3modes.cpp`)**: Manages and switches between the two motion detection scripts based on movement detection.

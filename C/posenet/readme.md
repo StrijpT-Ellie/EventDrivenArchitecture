@@ -1,197 +1,153 @@
-This folder containes code to be used with jetson-inference posenet. 
+# posenet
 
-combined - game implementations that use posenet and directly pass detected hand keypoints coordinates to control moving bar or snake
+## Overview
+This folder contains code for using `jetson-inference`'s `posenet` on Jetson Nano. It includes game implementations that utilize `posenet` for hand recognition and control.
 
-listeners - these game implementations listen to named pipe for recognised hand coordinates which must come from one of posenet.cpp versions from poseNetVersions folder
 
-poseNetVersions - posenet.cpp files updated to log coordinates and write to named pipe
+**Brick Pong Demo:** https://drive.google.com/file/d/15immDvVE9rzHjOSAga4jwyM3pBoCWAVq/view?usp=sharing 
 
----
----
-How to use 
+**Snake Demo:** https://drive.google.com/file/d/13E9lRFCfXW6GLsjpQeqEjfcrZtrPX8RK/view?usp=sharing 
 
-Use default Jetson Ubuntu 18.04 image 
-Install openCV with CUDA enabled 
+## Folder Structure
+- **combined**: Games using `posenet` to control elements directly with detected hand keypoints.
+- **listeners**: Games listening to a named pipe for hand coordinates provided by modified `posenet` versions.
+- **poseNetVersions**: Modified `posenet.cpp` files to log coordinates and write them to a named pipe.
 
-Clone jetson-inference repo
+## Setup
 
-How to run hand recognition with posenet on jetson nano 
+### Prerequisites
+1. **Jetson Nano with Ubuntu 18.04**.
+2. **OpenCV with CUDA enabled**.
+3. **jetson-inference repository**.
 
-git clone https://github.com/dusty-nv/jetson-inference
-
-git submodule update –init
-
-cd ~/Desktop/jetson-inference/utils/python/bindings
-
-nano PyCUDA.cpp
-
-Add the following line at the top of the file to define the `PYLONG_FROM_PTR` macro:
-
-#define PYLONG_FROM_PTR(ptr) PyLong_FromVoidPtr(ptr)
-
-   Update the `cudaStreamWaitEvent` call to include the `unsigned int flags` parameter, typically set to 0:
-
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/dusty-nv/jetson-inference
+   git submodule update --init
+   ```
+2. Modify `PyCUDA.cpp`:
+   ```bash
+   cd ~/jetson-inference/utils/python/bindings
+   nano PyCUDA.cpp
+   ```
+   Add the following line at the top:
+   ```cpp
+   #define PYLONG_FROM_PTR(ptr) PyLong_FromVoidPtr(ptr)
+   ```
+   Update `cudaStreamWaitEvent`:
+   ```cpp
    PYCUDA_ASSERT(cudaStreamWaitEvent(stream, event, 0));
-
-Save and exit
-
-cd jetson-inference
-
-mkdir build
-
-   cd ~/Desktop/jetson-inference/build
+   ```
+3. Build the project:
+   ```bash
+   cd ~/jetson-inference
+   mkdir build
+   cd build
    make clean
-   cmake ../
+   cmake ..
    make
+   sudo chmod -R 755 ~/jetson-inference/build
    ```
 
-allow permissions 
-sudo chmod -R 755 ~/Desktop/jetson-inference/build
+### Run `posenet` for Hand Recognition
+```bash
+cd ~/jetson-inference/build/aarch64/bin
+./posenet --network=resnet18-hand --topology=~/jetson-inference/data/networks/Pose-ResNet18-Hand/hand_pose.json /dev/video0
+```
 
+### Install Additional Dependencies
+```bash
+sudo apt-get install libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-{base,good,bad,ugly}
+```
 
-to run
-
-cd jetson-inference/build/aarch64/bin
-
- 
-./posenet --network=resnet18-hand --topology=~/Desktop/jetson-inference/data/networks/Pose-ResNet18-Hand/hand_pose.json /dev/video0–
-
-
-
-install dependencies
-sudo apt-get install libgstreamer1.0-dev gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly
-
-—
-Check cameras
-
+### Check Camera Functionality
+```bash
 gst-launch-1.0 v4l2src device=/dev/video0 ! video/x-raw,format=YUY2,width=640,height=480 ! videoconvert ! autovideosink
-
 gst-launch-1.0 v4l2src device=/dev/video0 ! image/jpeg,width=640,height=480 ! jpegdec ! videoconvert ! autovideosink
+```
 
-./posenet --network=resnet18-hand --topology=~/Desktop/jetson-inference/data/networks/Pose-ResNet18-Hand/hand_pose.json --input-width=640 --input-height=480 --input-codec=mjpeg /dev/video0
+## Modified `posenet.cpp`
+1. Navigate to:
+   ```bash
+   cd ~/jetson-inference/examples/posenet
+   cp posenet.cpp my_posenet.cpp
+   ```
+2. Edit `CMakeLists.txt`:
+   ```cmake
+   #file(GLOB posenetSources *.cpp)
+   #file(GLOB posenetIncludes *.h)
+   #cuda_add_executable(posenet ${posenetSources})
+   cuda_add_executable(posenet posenet.cpp)
+   target_link_libraries(posenet jetson-inference)
+   install(TARGETS posenet DESTINATION bin)
 
-—
+   # New executable
+   cuda_add_executable(my_posenet my_posenet.cpp)
+   target_link_libraries(my_posenet jetson-inference)
+   install(TARGETS my_posenet DESTINATION bin)
+   ```
+3. Use `my_posenet_saveToNamedPipe.cpp` for saving coordinates to a named pipe:
+   ```bash
+   ./my_posenet --network=resnet18-hand --topology=~/jetson-inference/data/networks/Pose-ResNet18-Hand/hand_pose.json --input-width=640 --input-height=480 --input-codec=mjpeg /dev/video0
+   tail -f /tmp/movement_pipe
+   ```
 
-To work with the copy of original posenet.cpp 
-cd /jetson-inference/examples/posenet 
+## Additional Resources
+- **System Monitoring**:
+  ```bash
+  sudo tegrastats
+  sudo dmesg
+  ```
 
-clone file
-cp posenet.cpp my_posenet.cpp
+- **Files Location**:
+  - `jetson-inference/c/poseNet.h`
+  - `jetson-inference/c/poseNet.cpp`
 
-Comment out GLOB, change cuda_add_executabl, add new lines inside the new file 
-
-#file(GLOB posenetSources *.cpp)
-#file(GLOB posenetIncludes *.h )
-
-#cuda_add_executable(posenet ${posenetSources})
-cuda_add_executable(posenet posenet.cpp)
-target_link_libraries(posenet jetson-inference)
-install(TARGETS posenet DESTINATION bin)
-
-#New executable 
-cuda_add_executable(my_posenet my_posenet.cpp)
-target_link_libraries(my_posenet jetson-inference)
-install(TARGETS my_posenet DESTINATION bin)
-
-Use code from poseNetVersions which saves coordinates to named pipe
-my_posenet_saveToNamedPipe.cpp
-
-Run new file
-./my_posenet --network=resnet18-hand --topology=~/Desktop/jetson-inference/data/networks/Pose-ResNet18-Hand/hand_pose.json --input-width=640 --input-height=480 --input-codec=mjpeg /dev/video0
-
-
-Read named pipe 
-tail -f /tmp/movement_pipe
-
-Resources usage 
-sudo tegrastats
-
-System log
-sudo dmesg
-
-—-
-Find files at 
-
-jetson-inference/c
-poseNet.h
-poseNet.cpp
-
-— — —
-CmakeList for games
-
+## CMakeLists for Games
+### `brickPong`
+```cmake
 cmake_minimum_required(VERSION 3.10)
 project(brickPong)
 
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(brickPong brickPong.cpp)
-target_link_libraries(brickPong ${OpenCV_LIBS})
-
-—
-cmake_minimum_required(VERSION 3.10)
-project(brickPong)
-
-find_package(OpenCV REQUIRED)
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-# Original executable
 add_executable(brickPong brickPong.cpp)
 target_link_libraries(brickPong ${OpenCV_LIBS})
 
 # New executable for the updated version
 add_executable(brickPong_Updated brickPong_Updated.cpp)
 target_link_libraries(brickPong_Updated ${OpenCV_LIBS})
+```
 
-—
-
-How to run games with hand controller 
-
-Run my_posenet_2fingers first (it will launch and close due to failing to open a named pipe) 
-This will create a pipe 
-
-Then open the pipe with: 
-tail -f /tmp/movement_pipe 
-
-then run posenet 2 fingers again
-
-then run brickPong 
-
-as well brickpong and snake listen to the pipe (can launch them instead of pipe listening with tail) 
-
-—
-—
-Compilation example 
- g++ -o paddle_ball paddle_ball.cpp -lSDL2
-
-Use dbus-launch for different environment when running 
-sudo dbus-launch ./paddle_ball 
-
-—
-
+### `poseNetBrickPong`
+```cmake
 cmake_minimum_required(VERSION 3.10)
-
 project(poseNetBrickPong)
 
-# Find OpenCV
 find_package(OpenCV REQUIRED)
-
-# Find SDL2
 find_package(SDL2 REQUIRED)
 
-# Include directories
 include_directories(${OpenCV_INCLUDE_DIRS} ${SDL2_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/../jetson-inference)
 
-# Source files
 set(SOURCES my_posenet.cpp)
 
-# New executable
 cuda_add_executable(poseNetBrickPong ${SOURCES})
 target_link_libraries(poseNetBrickPong jetson-inference ${OpenCV_LIBS} ${SDL2_LIBRARIES})
 install(TARGETS poseNetBrickPong DESTINATION bin)
+```
 
+### Compilation Example
+```bash
+g++ -o paddle_ball paddle_ball.cpp -lSDL2
+sudo dbus-launch ./paddle_ball
+```
 
-—-
---- --- ---
-
-
+## Running Games with Hand Controller
+1. Run `my_posenet_2fingers` to create a named pipe:
+   ```bash
+   ./my_posenet_2fingers
+   tail -f /tmp/movement_pipe
+   ```
+2. Run the desired game (e.g., `brickPong`).
