@@ -4,13 +4,19 @@
 This folder contains various C/C++ programs developed for the Jetson Nano to control animations, detect movement, recognize poses and hands, and implement simple games such as snake and brick pong.
 
 ## Contents
-- **animations**: Scripts to control and display various animations.
-- **movement_detection**: Programs for detecting movement using computer vision techniques.
-- **pose_hand_recognition**: Scripts to recognize poses and hand gestures.
-- **snake_game**: Implementation of the classic snake game.
-- **brick_pong_game**: Implementation of the brick pong game.
+- **basics**: Beginner level examples with C/C++
+  
+- **eventDriven**: implementation of a simple event driven architecture with named pipe and user presence/movement recognition
+  
+- **openCVexamples**: Examples with video to pixel wall projection, with animation effects and CUDA utilisation
+  
+- **posenet**: C++ implementation of games with AI hand recognition
+  
+- **wrapper**: Implementation of the C++ wrapper to interact with Rust library
 
 ## Requirements
 - Jetson Nano
+- Ubuntu 18.04
+- SDL2
 - OpenCV
 - Additional libraries as specified in each subfolder's README or source code.

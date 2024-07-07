@@ -107,10 +107,4 @@ Both `arrayNoVideo.cpp` and `fadingPixels.cpp` have been updated to write timest
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-```
-
----
-
-
+This project is licensed under the MIT License.
